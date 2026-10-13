@@ -90,6 +90,9 @@ namespace GITC.Core
                 1.0f);
             currUserInfo = new UserInfo();
             currGameState = new GameState(this);
+
+            //TESTING, REMOVE AFTER
+            DevChecks.Run();
         }
 
         /// <summary>
