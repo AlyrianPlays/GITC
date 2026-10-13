@@ -133,4 +133,14 @@ namespace GITC.Core
         deepward,
         whiteout
     }
+
+    public enum ModuleTypes
+    {
+        tim,
+        fav,
+        lvm,
+        vm,
+        him,
+        pm
+    }
 }
