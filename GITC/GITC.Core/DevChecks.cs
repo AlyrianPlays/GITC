@@ -30,6 +30,13 @@ namespace GITC.Core
                 foreach (Company c in companies)
                     if (!Enum.TryParse<Companies>(c.id, out _))
                         System.Diagnostics.Debug.WriteLine("DevChecks company id not in Companies enum: " + c.id);
+
+            // T-2.4: a flag saved on one run is still there on the next (delete Content/Saves/save.json to reset)
+            SaveManager saves = new SaveManager();
+            saves.Load();
+            System.Diagnostics.Debug.WriteLine("DevChecks save file " + saves.savePath + ": test_mission already unlocked = " + saves.IsMissionUnlocked("test_mission"));
+            saves.UnlockMission("test_mission");
+            saves.Save();
         }
     }
 }
