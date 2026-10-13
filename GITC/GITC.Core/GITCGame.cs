@@ -22,12 +22,15 @@ namespace GITC.Core
         internal Camera currCamera { get; set; }
         internal UserInfo currUserInfo { get; set; }
         internal GameState currGameState { get; set; }
+        internal ContentRegistry _content { get; set; }
         private SpriteFont _gameFont { get; set; }
         private RenderTarget2D _renderTarget { get; set; }
-        internal Texture2D _pixelTexture { get; set; }
         private Rectangle _viewRect { get; set; }
         private const bool SHOWHUDDEBUG = true; //TESTING, REMOVE AFTER
-        private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
+        //Deprecated: replaced by ContentRegistry (T-1.6)
+        //private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
+        // Registry keys of the HUD layers, drawn in this order
+        private string[] _backgroundKeys = { "hud", "hud_screen_overlay" };
         /// <summary>
         /// Indicates if the game is running on a mobile platform.
         /// </summary>
@@ -94,18 +97,18 @@ namespace GITC.Core
         /// </summary>
         protected override void LoadContent()
         {
-            _gameFont = Content.Load<SpriteFont>("Fonts/File");
+            _content = new ContentRegistry(Content, GraphicsDevice);
+            _content.LoadAll();
+            _gameFont = _content.GetFont(ContentRegistry.DEFAULTFONT);
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             //Created once and reused every frame (was allocated per frame in Draw)
             _renderTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
-            _pixelTexture = new Texture2D(GraphicsDevice, 1, 1);
-            _pixelTexture.SetData(new[] { Color.White });
-            // TODO: Add all textures to this load loop, based on string list or some book-keeping method
-            _backgroundGameTextures = new Dictionary<string, Texture2D>()
-            {
-                { "background", Content.Load<Texture2D>("HUD") },
-                { "screen_overlay", Content.Load<Texture2D>("HUD_ScreenOverlay") }
-            };
+            //Deprecated: replaced by the ContentRegistry manifests (T-1.6)
+            //_backgroundGameTextures = new Dictionary<string, Texture2D>()
+            //{
+            //    { "background", Content.Load<Texture2D>("HUD") },
+            //    { "screen_overlay", Content.Load<Texture2D>("HUD_ScreenOverlay") }
+            //};
             graphicsDeviceManager.IsFullScreen = true;
             graphicsDeviceManager.ApplyChanges();
             base.LoadContent();
@@ -140,10 +143,10 @@ namespace GITC.Core
         /// </summary>
         private void DrawOutline(Rectangle r, Color color)
         {
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Y, r.Width, 1), color);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Bottom - 1, r.Width, 1), color);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Y, 1, r.Height), color);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.Right - 1, r.Y, 1, r.Height), color);
+            _spriteBatch.Draw(_content.pixel, new Rectangle(r.X, r.Y, r.Width, 1), color);
+            _spriteBatch.Draw(_content.pixel, new Rectangle(r.X, r.Bottom - 1, r.Width, 1), color);
+            _spriteBatch.Draw(_content.pixel, new Rectangle(r.X, r.Y, 1, r.Height), color);
+            _spriteBatch.Draw(_content.pixel, new Rectangle(r.Right - 1, r.Y, 1, r.Height), color);
         }
 
         /// <summary>
@@ -152,7 +155,7 @@ namespace GITC.Core
         protected override void UnloadContent()
         {
             _renderTarget?.Dispose();
-            _pixelTexture?.Dispose();
+            _content?.Dispose();
             base.UnloadContent();
         }
 
@@ -211,8 +214,8 @@ namespace GITC.Core
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
             // Draw background elements
-            foreach (String s in _backgroundGameTextures.Keys)
-            _spriteBatch.Draw(_backgroundGameTextures[s],
+            foreach (String s in _backgroundKeys)
+            _spriteBatch.Draw(_content.GetTexture(s),
                                 new Vector2(0, 0),
                                 null,
                                 Color.White,
@@ -231,7 +234,7 @@ namespace GITC.Core
             }
 
             // Cursor
-            Texture2D cursTexture = _pixelTexture;
+            Texture2D cursTexture = _content.pixel;
             Rectangle cursRect = new Rectangle(new Point((currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))).Length * textWidth) + GameState.CONSOLEMINWIDTH,
                                                          (textHeight / 4) * 3 + GameState.CONSOLEMAXHEIGHT),
                                                          //OLD METHOD: Chases newlines, typical console buffer
