@@ -26,6 +26,7 @@ namespace GITC.Core
         private RenderTarget2D _renderTarget { get; set; }
         internal Texture2D _pixelTexture { get; set; }
         private Rectangle _viewRect { get; set; }
+        private const bool SHOWHUDDEBUG = true; //TESTING, REMOVE AFTER
         private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
         /// <summary>
         /// Indicates if the game is running on a mobile platform.
@@ -135,6 +136,17 @@ namespace GITC.Core
         }
 
         /// <summary>
+        /// Draws a 1-px rectangle outline using the shared pixel texture.
+        /// </summary>
+        private void DrawOutline(Rectangle r, Color color)
+        {
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Y, r.Width, 1), color);
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Bottom - 1, r.Width, 1), color);
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.X, r.Y, 1, r.Height), color);
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(r.Right - 1, r.Y, 1, r.Height), color);
+        }
+
+        /// <summary>
         /// Releases the render target and shared pixel texture created in LoadContent.
         /// </summary>
         protected override void UnloadContent()
@@ -228,6 +240,15 @@ namespace GITC.Core
                                                new Point(textWidth,
                                                          textHeight / 4));
             _spriteBatch.Draw(cursTexture,cursRect,Color.White);
+
+            //TESTING, REMOVE AFTER: outline the HudLayout regions to check them against HUD.png
+            if (SHOWHUDDEBUG)
+            {
+                Rectangle[] debugRects = { HudLayout.TIM, HudLayout.FAV, HudLayout.LVM, HudLayout.VM, HudLayout.TimePill, HudLayout.OPPill, HudLayout.HIMDial };
+                Color[] debugColors = { Color.Lime, Color.Yellow, Color.Cyan, Color.Magenta, Color.Red, Color.White, Color.Orange };
+                for (int i = 0; i < debugRects.Length; i++)
+                    DrawOutline(debugRects[i], debugColors[i]);
+            }
 
             _spriteBatch.End();
 
