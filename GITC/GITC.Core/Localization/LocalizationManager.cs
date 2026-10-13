@@ -15,7 +15,7 @@ namespace GITC.Core.Localization
         /// <summary>
         /// the culture code we default to
         /// </summary>
-        public const string DEFAULT_CULTURE_CODE = "en-EN";
+        public const string DEFAULT_CULTURE_CODE = "en-US";
 
         /// <summary>
         /// Retrieves a list of supported cultures based on available language resources in the game.

@@ -77,6 +77,11 @@ namespace GITC.Core
             // based on what the user or operating system selected.
             var selectedLanguage = LocalizationManager.DEFAULT_CULTURE_CODE;
             LocalizationManager.SetCulture(selectedLanguage);
+            currCamera = new Camera(GraphicsDevice.Viewport,
+                Camera.AutoResolution().Item1,
+                Camera.AutoResolution().Item2,
+                1.0f);
+            currUserInfo = new UserInfo();
             currGameState = new GameState(this);
         }
 
@@ -112,7 +117,7 @@ namespace GITC.Core
                 Exit();
 
             // TODO: Add your update logic here
-
+            currGameState.Update(gameTime);
 
             base.Update(gameTime);
         }
