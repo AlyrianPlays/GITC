@@ -34,7 +34,10 @@ namespace GITC.Core
         inventory,
         play,
         mainmenu,
-        interact
+        interact,
+        overworld,
+        scene,
+        pause
     }
 
     public enum BSettings

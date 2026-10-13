@@ -25,6 +25,8 @@ namespace GITC.Core
         public List<Sprite> elementSprites { get; set; }
         public GameStates currentGameState { get; set; }
         public InputManager input { get; set; }
+        //Moves into Mission in T-4.1
+        public ModuleManager moduleManager { get; set; }
         // Pass-throughs to InputManager, kept so existing callers keep working
         public MouseState currMouseState { get { return input.currMouseState; } }
         public MouseState lastMouseState { get { return input.lastMouseState; } }
@@ -46,6 +48,7 @@ namespace GITC.Core
         {
             this.currGame = currGame;
             input = new InputManager(currGame);
+            moduleManager = new ModuleManager(currGame);
             consoleToken = "USER:> ";
             consoleHistory = new String[CONSOLEHISTORY_SIZE];
             userText = new StringBuilder(consoleToken);
@@ -71,6 +74,15 @@ namespace GITC.Core
                 if (input.Pressed(kb))
                     System.Diagnostics.Debug.WriteLine("Pressed " + kb);
 
+            // Esc toggles the pause stub (T-11.6 turns it into a real menu)
+            if (input.Pressed(KeyBinds.settings))
+            {
+                if (currentGameState == GameStates.play)
+                    currentGameState = GameStates.pause;
+                else if (currentGameState == GameStates.pause)
+                    currentGameState = GameStates.play;
+            }
+
             // Update game state logic here
             switch (currentGameState)
             {
@@ -79,11 +91,16 @@ namespace GITC.Core
                 case GameStates.inventory:
                     break;
                 case GameStates.play:
-                    PlayHandler();
+                    PlayHandler(gameTime);
                     break;
                 case GameStates.mainmenu:
                     break;
                 case GameStates.interact:
+                    break;
+                case GameStates.pause:
+                    // Modules are frozen while paused
+                    if (Keyboard.GetState().IsKeyDown(Keys.Q))
+                        currGame.Exit();
                     break;
                 default:
                     break;
@@ -95,6 +112,10 @@ namespace GITC.Core
 
         internal void OnTextInput(object sender, TextInputEventArgs e)
         {
+            // Typing only reaches the console while the TIM is focused (D2); T-5.1 moves the console into TIMModule
+            if (currentGameState != GameStates.play || moduleManager.focusedModule != ModuleTypes.tim)
+                return;
+
             // Handle Backspace
             if (e.Key == Microsoft.Xna.Framework.Input.Keys.Back)
             {
@@ -181,10 +202,34 @@ namespace GITC.Core
                 }
             }
         }
-        public void PlayHandler()
+        public void PlayHandler(GameTime gameTime)
         {
             // Time since last frame
             double deltaTime = currGameTime - lastGameTime;
+
+            moduleManager.Update(gameTime, input);
+        }
+
+        // Draws the modules (call with no SpriteBatch open)
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            if (currentGameState == GameStates.play || currentGameState == GameStates.pause)
+                moduleManager.Draw(spriteBatch);
+        }
+
+        // Drawn last, over everything (call with no SpriteBatch open)
+        public void DrawOverlay(SpriteBatch spriteBatch)
+        {
+            if (currentGameState != GameStates.pause)
+                return;
+            SpriteFont font = currGame._content.GetFont(ContentRegistry.DEFAULTFONT);
+            string line1 = "PAUSED";
+            string line2 = "Esc: resume    Q: quit";
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            spriteBatch.Draw(currGame._content.pixel, new Microsoft.Xna.Framework.Rectangle(0, 0, 1920, 1080), Microsoft.Xna.Framework.Color.Black * 0.6f);
+            spriteBatch.DrawString(font, line1, new Vector2(960 - font.MeasureString(line1).X / 2, 500), Microsoft.Xna.Framework.Color.White);
+            spriteBatch.DrawString(font, line2, new Vector2(960 - font.MeasureString(line2).X / 2, 500 + font.MeasureString(line1).Y * 2), Microsoft.Xna.Framework.Color.White);
+            spriteBatch.End();
         }
 
         //Deprecated: replaced by InputManager.Update (T-1.5)

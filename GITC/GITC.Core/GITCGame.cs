@@ -112,7 +112,8 @@ namespace GITC.Core
             //    { "background", Content.Load<Texture2D>("HUD") },
             //    { "screen_overlay", Content.Load<Texture2D>("HUD_ScreenOverlay") }
             //};
-            graphicsDeviceManager.IsFullScreen = true;
+            //TESTING: set env var GITC_WINDOWED=1 to run windowed (screenshots, letterbox checks); settings screen replaces this in T-11.6
+            graphicsDeviceManager.IsFullScreen = Environment.GetEnvironmentVariable("GITC_WINDOWED") != "1";
             graphicsDeviceManager.ApplyChanges();
             base.LoadContent();
         }
@@ -170,9 +171,8 @@ namespace GITC.Core
         /// </param>
         protected override void Update(GameTime gameTime)
         {
-            // Exit the game if the Back button (GamePad) or Escape key (Keyboard) is pressed.
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
-                || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            // Exit the game if the Back button (GamePad) is pressed. Escape now opens the pause stub (GameState).
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 Exit();
 
             // TODO: Add your update logic here
@@ -228,6 +228,11 @@ namespace GITC.Core
                                 SpriteEffects.None,
                                 0);
 
+            // Modules draw in their own scissored batches, so close this batch around them
+            _spriteBatch.End();
+            currGameState.Draw(_spriteBatch);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+
             // Draw the accumulating string buffer
             _spriteBatch.DrawString(_gameFont, currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT), Color.White);
             for (int i = 0; i < GameState.CONSOLEHISTORY_SIZE; i++)
@@ -257,6 +262,8 @@ namespace GITC.Core
             }
 
             _spriteBatch.End();
+
+            currGameState.DrawOverlay(_spriteBatch);
 
             //Reset RenderTarget and draw the target to the back buffer, uniformly scaled and letterboxed
             GraphicsDevice.SetRenderTarget(null);
