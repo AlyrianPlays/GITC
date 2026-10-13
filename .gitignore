@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# MonoGame content pipeline output
+Content/bin/
+Content/obj/
+*.xnb
+
+# Backups
+*.bak
+*.zip

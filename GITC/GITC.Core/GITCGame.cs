@@ -1,0 +1,205 @@
+using GITC.Core.Localization;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using System;
+using System.Text;
+using System.Collections.Generic;
+using System.Globalization;
+using static System.Net.Mime.MediaTypeNames;
+
+namespace GITC.Core
+{
+    /// <summary>
+    /// The main class for the game, responsible for managing game components, settings, 
+    /// and platform-specific configurations.
+    /// </summary>
+    public class GITCGame : Game
+    {
+        // Resources for drawing.
+        private GraphicsDeviceManager graphicsDeviceManager;
+        private SpriteBatch _spriteBatch;
+        internal Camera currCamera { get; set; }
+        internal UserInfo currUserInfo { get; set; }
+        internal GameState currGameState { get; set; }
+        private SpriteFont _gameFont { get; set; }
+        private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
+        /// <summary>
+        /// Indicates if the game is running on a mobile platform.
+        /// </summary>
+        public readonly static bool IsMobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+
+        /// <summary>
+        /// Indicates if the game is running on a desktop platform.
+        /// </summary>
+        public readonly static bool IsDesktop = OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() || OperatingSystem.IsWindows();
+
+        /// <summary>
+        /// Initializes a new instance of the game. Configures platform-specific settings, 
+        /// initializes services like settings and leaderboard managers, and sets up the 
+        /// screen manager for screen transitions.
+        /// </summary>
+        public GITCGame()
+        {
+            graphicsDeviceManager = new GraphicsDeviceManager(this) 
+            {
+                // Set the window size to the current display size
+                PreferredBackBufferWidth = Camera.AutoResolution().Item1,
+                PreferredBackBufferHeight = Camera.AutoResolution().Item2,
+            };
+
+            // Share GraphicsDeviceManager as a service.
+            Services.AddService(typeof(GraphicsDeviceManager), graphicsDeviceManager);
+
+            Content.RootDirectory = "Content";
+
+            // Configure screen orientations.
+            graphicsDeviceManager.SupportedOrientations = DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
+        }
+
+        /// <summary>
+        /// Initializes the game, including setting up localization and adding the 
+        /// initial screens to the ScreenManager.
+        /// </summary>
+        protected override void Initialize()
+        {
+            base.Initialize();
+
+            // Load supported languages and set the default language.
+            List<CultureInfo> cultures = LocalizationManager.GetSupportedCultures();
+            var languages = new List<CultureInfo>();
+            for (int i = 0; i < cultures.Count; i++)
+            {
+                languages.Add(cultures[i]);
+            }
+
+            // TODO You should load this from a settings file or similar,
+            // based on what the user or operating system selected.
+            var selectedLanguage = LocalizationManager.DEFAULT_CULTURE_CODE;
+            LocalizationManager.SetCulture(selectedLanguage);
+            currGameState = new GameState(this);
+        }
+
+        /// <summary>
+        /// Loads game content, such as textures and particle systems.
+        /// </summary>
+        protected override void LoadContent()
+        {
+            _gameFont = Content.Load<SpriteFont>("Fonts/File");
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            // TODO: Add all textures to this load loop, based on string list or some book-keeping method
+            _backgroundGameTextures = new Dictionary<string, Texture2D>()
+            {
+                { "background", Content.Load<Texture2D>("HUD") },
+                { "screen_overlay", Content.Load<Texture2D>("HUD_ScreenOverlay") }
+            };
+            graphicsDeviceManager.IsFullScreen = true;
+            graphicsDeviceManager.ApplyChanges();
+            base.LoadContent();
+        }
+
+        /// <summary>
+        /// Updates the game's logic, called once per frame.
+        /// </summary>
+        /// <param name="gameTime">
+        /// Provides a snapshot of timing values used for game updates.
+        /// </param>
+        protected override void Update(GameTime gameTime)
+        {
+            // Exit the game if the Back button (GamePad) or Escape key (Keyboard) is pressed.
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
+                || Keyboard.GetState().IsKeyDown(Keys.Escape))
+                Exit();
+
+            // TODO: Add your update logic here
+
+
+            base.Update(gameTime);
+        }
+
+        /// <summary>
+        /// Draws the game's graphics, called once per frame.
+        /// </summary>
+        /// <param name="gameTime">
+        /// Provides a snapshot of timing values used for rendering.
+        /// </param>
+        protected override void Draw(GameTime gameTime)
+        {
+            //Text variables
+            Vector2 fontSize = _gameFont.MeasureString("H");
+            int textWidth = (int)fontSize.X;
+            int textHeight = (int)fontSize.Y;
+            while (textHeight % textWidth != 0)
+            {
+                textHeight++;
+            }
+
+            //Create RenderTarget2D with a resolution of 1920x1080
+            RenderTarget2D renderTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
+
+            //Scale the render target to fit the window
+            //TODO: Change the global reference to user-selected dimensions
+            float scaleFactorX = (float)Globals.DisplayWidth / (float)renderTarget.Width;
+            //float scaleFactorX = 960 / (float)renderTarget.Width;
+            float scaleFactorY = (float)Globals.DisplayHeight / (float)renderTarget.Height;
+            //float scaleFactorY = 540 / (float)renderTarget.Height;
+
+            Matrix scaleMatrix = Matrix.CreateScale(scaleFactorX, scaleFactorY, 1);
+
+            GraphicsDevice.SetRenderTarget(renderTarget);
+            GraphicsDevice.Clear(Color.Black);
+
+            //Revised SpriteBatch Begin
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+
+            _spriteBatch.End();
+
+            //Reset RenderTarget
+            GraphicsDevice.SetRenderTarget(null);
+
+            
+
+            _spriteBatch.Begin(samplerState: SamplerState.AnisotropicClamp, transformMatrix: scaleMatrix);
+            _spriteBatch.Draw(renderTarget, Vector2.Zero, Color.White);
+
+            // Draw background elements
+            foreach (String s in _backgroundGameTextures.Keys)
+            _spriteBatch.Draw(_backgroundGameTextures[s],
+                                new Vector2(0, 0),
+                                null,
+                                Color.White,
+                                0,
+                                Vector2.Zero,
+                                1,
+                                SpriteEffects.None,
+                                0);
+
+            // Draw the accumulating string buffer
+            _spriteBatch.DrawString(_gameFont, currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT), Color.White);
+            for (int i = 0; i < GameState.CONSOLEHISTORY_SIZE; i++)
+            {
+                if (currGameState.consoleHistory[i] != null)
+                    _spriteBatch.DrawString(_gameFont, currGameState.consoleHistory[i].ToString(), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT - (textHeight*(i+1))), Color.White);
+            }
+
+            // Cursor
+            Texture2D cursTexture = new Texture2D(GraphicsDevice, 1, 1);
+            cursTexture.SetData(new[] { Color.White });
+            Rectangle cursRect = new Rectangle(new Point((currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))).Length * textWidth) + GameState.CONSOLEMINWIDTH,
+                                                         (textHeight / 4) * 3 + GameState.CONSOLEMAXHEIGHT),
+                                                         //OLD METHOD: Chases newlines, typical console buffer
+                                                         //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length % GameState.CONSOLEWRITELINE_SIZE)*textWidth) + GameState.CONSOLEMINWIDTH,
+                                                         //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length / GameState.CONSOLEWRITELINE_SIZE)*textHeight)+(textHeight/4)*3+ GameState.CONSOLEMAXHEIGHT),
+                                               new Point(textWidth,
+                                                         textHeight / 4));
+            _spriteBatch.Draw(cursTexture,cursRect,Color.White);
+
+            _spriteBatch.End();
+
+            // Dispose of the render target
+            renderTarget.Dispose();
+
+            base.Draw(gameTime);
+        }
+    }
+}

@@ -1,0 +1,40 @@
+GITC - Game Description
+Game world:
+- GITC takes place in an alternate reality in 1983, where Gods have turned away from prayer and toward something more reliable for worship: money. Each company in the game has a CEO, which in reality is an elder god. The game's story
+will revolve around these gods and their interactions. The player will not know anything about these gods or their backgrounds at the start of the game, they will only think they work for a freelance organization called Whiteout,
+working as a contract operator for the different companies. More lore will be revealed in scenes between levels, secrets when navigating the TIM, etc. The user will be able to complete the game in one of three paths: The Path of 
+Genesis, The Path of Revelation, and the Path of Lamentation. The true story will be revealed bit by bit, but the main beats are in the following section.
+Story:
+- Lycrin is the son of Praejovin. Sadaline was the daughter of Ognatorus. Lycrin and Sadaline were in love, but Ognatorus and Praejovin are opposing gods. Ognatorus broke Lycrin's mind, causing him to kill his father. But
+in Lycrin's blind fury, he also killed Sadaline. Sadaline's spirit lived on in the scarf she left behind (seen in the Wisdus company logo). Lycrin lost his memory, eventually taking a job as a contract operator for his own
+company, Whiteout. The Path of Genesis will reveal that Lycrin killed Praejovin, but not exactly why. The Path of Lamentation will reveal that Ognatorus was to blame for everything. The Path of Revelation will only be available
+once the other two paths are completed, and it will reveal that Sadaline's spirit is still alive. 
+Primary game loop: 
+- At any given time, a module will have an active task that the player must complete. There will be a time limit (shown on the far right-hand side at the top of the Hardware Interface Module), and if the player
+makes it to the end of the time limit without losing too many Operator Points (OPs, shown just below the remaining time), they win the level. If their Operator Points drop to zero before time runs out, they lose the level. The
+player will choose which company to run missions for (see below section on "Companies"), and each successive mission will unlock new missions for that company, getting harder and harder as they go. Specific companies will lean
+into one module more than others.
+Modules:
+- Upper Left: Text Input Module (TIM), this module allows the player to type out a list of knowable and hidden commands. These commands will be necessary to navigate certain conditions within the other modules and
+will be used in the "overworld" navigation outside of the primary game loop (select levels, discover meta secrets, etc.). If a command must be entered to progress in another module, there will be a time limit to enter the
+command. If the player fails to enter it in time, they lose Operator Points.
+- Lower Left: Field Agent Visualizer (FAV), this module allows the player to command a field agent in a 2D side-scrolling view. When this module is selected, they will move with A (left), S (hide), D (right), and Spacebar (jump).
+There will be enemies to avoid, obstacles to jump over, and barriers the field agent will encounter that the player will need to use the TIM to disengage. If the field agent dies, the player loses Operator Points.
+- Upper Right: Lidar Validation Module (LVM), this module allows the player to pathfind their way through a maze from one side to the other using WASD to move one square unit at a time. Each level increases the maze's difficulty. 
+If the player makes a wrong turn, they must start over and lose Operator Points.
+- Lower Right: Vital Monitor (VM), this module allows the player to see 3 different vital signs of their field agent: Heart Rate, Sanity, and Temperature. If these values get too low or too high, the player must enter certain
+commands in the TIM. If any of them remain too high/low for too long, the field agent will die. This will terminate an active FAV session and will cause the player to lose double the points (for failing the FAV and for failing
+the VM).
+- Far Right (Lower): Hardware Interface Module (HIM), occasionally, this module will activate, shutting down access to all other modules. The player must complete a "simon says" style puzzle before the other modules will 
+reactivate. If the player fails the puzzle, they lose Operator Points and the modules will reactivate. Key point: Any active modules during the HIM's activation will remain active in the background, so if there are any 
+time-sensitive modules active when the HIM pops up, the player will have to hurry to complete the HIM puzzle so they don't fail the other modules.
+- Far Right (Upper): Progress Meters (PM), this is not an interactive module, it simply shows time remaining and operator points remaining.
+Companies (Any marked with "(Prior)" in the name section are previous iterations of the named company, meaning a new CEO has taken over, the company no longer exists, etc.):
+- Name: Swiftail, CEO: Kit (God name: Kitserix), Color: Orange, Logo: Fox
+- Name: Priden, CEO: Tali (God name: Talikaad), Color: Yellow, Logo: Lion
+- Name: Slithiss, CEO: Syl (God name: Syllenia), Color: Green, Logo: Serpent
+- Name: Wisdus, CEO: Len (God name: Hollendov), Color: Dark Blue, Logo: Tome w/ Scarf
+- Name: Wisdus (Prior), CEO: Sada (God name: Sadaline), Color: Light Blue, Logo: Otter
+- Name: Highmount (Prior), CEO: Vin (God name: Praejovin), Color: Red, Logo: Dragon
+- Name: Deepward, CEO: Russ (God name: Ognatorus), Color: Purple, Logo: Kraken
+- Name: Whiteout, CEO: {The player, but they don't know this} (God name: Lycrin), Color: White, Logo: Wolf

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="GITC/GITC.Core/GITC.Core.csproj" />
+  <Project Path="GITC/GITC.DesktopGL/GITC.DesktopGL.csproj" />
+</Solution>

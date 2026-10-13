@@ -1,0 +1,236 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using System;
+using System.CodeDom;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Runtime.Serialization;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace GITC.Core
+{
+    internal class GameState
+    {
+        public Sprite mainChar { get; set; }
+        public List<Sprite> activeSprites { get; set; }
+        public List<Sprite> elementSprites { get; set; }
+        public GameStates currentGameState { get; set; }
+        public MouseState currMouseState { get; set; }
+        public MouseState lastMouseState { get; set; }
+        public List<bool> currKeyStates { get; set; }
+        public List<bool> lastKeyStates { get; set; }
+        public double currGameTime { get; set; }
+        public double lastGameTime { get; set; }
+        public GITCGame currGame { get; set; }
+        public StringBuilder userText { get; set; }
+        public String consoleToken { get; set;  }
+        public String[] consoleHistory { get; set; }
+        public const int CONSOLEHISTORY_SIZE = 27;
+        public const int CONSOLEWRITELINE_SIZE = 102-11;
+        public const int CONSOLEMAXHEIGHT = 63*8;
+        public const int CONSOLEMINWIDTH = 11*8;
+        public const int CONSOLEMAXWIDTH = 102*8;
+
+        public GameState(GITCGame currGame)
+        {
+            currKeyStates = new List<bool>();
+            lastKeyStates = new List<bool>();
+            for (int i = 0; i < Enum.GetValues(typeof(KeyBinds)).Length + Enum.GetNames(typeof(WeirdKeys)).Length; i++)
+            {
+                currKeyStates.Add(false);
+                lastKeyStates.Add(false);
+            }
+            this.currGame = currGame;
+            consoleToken = "USER:> ";
+            consoleHistory = new String[CONSOLEHISTORY_SIZE];
+            userText = new StringBuilder(consoleToken);
+            // Subscribe to the text input event
+            currGame.Window.TextInput += OnTextInput;
+            //testing
+            mainChar = new Sprite();
+            currentGameState = GameStates.play;
+            currGameTime = 0;
+            lastGameTime = 0;
+        }
+        public void Update(GameTime gameTime)
+        {
+            if (currGameTime != 0)
+                lastGameTime = currGameTime;
+            currGameTime = gameTime.TotalGameTime.TotalMilliseconds;
+
+            // Set key states
+            SetKeyStates();
+
+            // Update game state logic here
+            switch (currentGameState)
+            {
+                case GameStates.settings:
+                    break;
+                case GameStates.inventory:
+                    break;
+                case GameStates.play:
+                    PlayHandler();
+                    break;
+                case GameStates.mainmenu:
+                    break;
+                case GameStates.interact:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        internal void OnTextInput(object sender, TextInputEventArgs e)
+        {
+            // Handle Backspace
+            if (e.Key == Microsoft.Xna.Framework.Input.Keys.Back)
+            {
+                if (userText.Length > consoleToken.Length)
+                {
+                    if (userText.ToString().EndsWith(Environment.NewLine))
+                    {
+                        userText.Remove(userText.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+                    }
+                    if (userText.ToString().Replace(Environment.NewLine, "").Length > consoleToken.Length) 
+                    {
+                        userText.Remove(userText.Length - 1, 1);
+                    }
+                }
+            }
+            // Handle Enter/Return if you want to submit text
+            else if (e.Key == Microsoft.Xna.Framework.Input.Keys.Enter)
+            {
+                SubmitText();
+            }
+            // Append valid character typing (filters out unprintable keys automatically)
+            else if (e.Character != '\0' && !char.IsControl(e.Character))
+            {
+                if (userText.Length > 0 && userText.ToString().Replace(Environment.NewLine,"").Length % CONSOLEWRITELINE_SIZE == 0)
+                {
+                    userText.Append(Environment.NewLine);
+                }
+                userText.Append(e.Character);
+            }
+        }
+
+        public static int GetLineCount(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return 0;
+
+            int count = 1;
+            int index = 0;
+
+            while ((index = input.IndexOf('\n', index)) != -1)
+            {
+                count++;
+                index++;
+            }
+
+            return count;
+        }
+        private void SubmitText()
+        {
+            int userLineNum = GetLineCount(userText.ToString());
+            string[] userLines = userText.ToString().Split(Environment.NewLine);
+            for (int k = 0; k < userLineNum; k++)
+            {
+                for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
+                {
+                    consoleHistory[i] = consoleHistory[i - 1];
+                }
+                consoleHistory[0] = userLines[k];
+            }
+            ProcessCommand();
+            userText.Clear();
+            userText = new StringBuilder(consoleToken);
+        }
+
+        private void ProcessCommand()
+        {
+            string command = userText.ToString().Remove(0,consoleToken.Length).Split(' ')[0];
+            string args = string.Join(' ',userText.ToString().Remove(0, consoleToken.Length).Split(' ')[1..]);
+            if (Enum.GetNames<Commands>().Contains(command))
+            {
+                switch (Enum.Parse(typeof(Commands), command))
+                {
+                    case Commands.echo:
+                        string[] outputLines = string.Join(Environment.NewLine, Enumerable.Range(0, (args.Length + CONSOLEWRITELINE_SIZE - 1) / CONSOLEWRITELINE_SIZE).Select(i => args.ToString().Substring(i * CONSOLEWRITELINE_SIZE, Math.Min(CONSOLEWRITELINE_SIZE, args.Length - i * CONSOLEWRITELINE_SIZE)))).Split(Environment.NewLine);
+                        int outputLineNum = GetLineCount(string.Join(Environment.NewLine,outputLines));
+                        for (int k = 0; k < outputLineNum; k++)
+                        {
+                            for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
+                            {
+                                consoleHistory[i] = consoleHistory[i - 1];
+                            }
+                            consoleHistory[0] = outputLines[k];
+                        }
+                        break;
+                }
+            }
+        }
+        public void PlayHandler()
+        {
+            // Time since last frame
+            double deltaTime = currGameTime - lastGameTime;
+        }
+
+        //Get all relevant keyboard IsKeyDown states
+        public void SetKeyStates()
+        {
+            List<bool> newKeyStates = new List<bool>();
+            lastKeyStates = currKeyStates;
+            KeyboardState ks = Keyboard.GetState();
+
+            //Get mouse positional and click information
+            lastMouseState = currMouseState;
+            currMouseState = Mouse.GetState();
+
+            //GOLDEN FORMULA FOR SCALING MOUSE POSITION, NEVER LOSE THIS!!!
+            Vector2 scaledMousePosition = new Vector2(((currMouseState.X) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.X) - (currGame.currCamera._viewportWidth / 2) / currGame.currCamera.Zoom),
+                                              ((currMouseState.Y) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.Y) - (currGame.currCamera._viewportHeight / 2) / currGame.currCamera.Zoom));
+
+            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count + Enum.GetNames(typeof(WeirdKeys)).Length; i++)
+            {
+                newKeyStates.Add(false);
+            }
+
+            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count; i++)
+            {
+                if (currGame.currUserInfo.keyBinds[i] >= (int)WeirdKeys.leftclick)
+                {
+                    switch (currGame.currUserInfo.keyBinds[i])
+                    {
+                        case (int)WeirdKeys.leftclick:
+                            newKeyStates[i] = currMouseState.LeftButton == ButtonState.Pressed;
+                            break;
+                        case (int)WeirdKeys.rightclick:
+                            newKeyStates[i] = currMouseState.RightButton == ButtonState.Pressed;
+                            break;
+                        case (int)WeirdKeys.scroll_up:
+                            newKeyStates[i] = currMouseState.ScrollWheelValue > lastMouseState.ScrollWheelValue;
+                            break;
+                        case (int)WeirdKeys.scroll_down:
+                            newKeyStates[i] = currMouseState.ScrollWheelValue < lastMouseState.ScrollWheelValue;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                else
+                {
+                    newKeyStates[i] = ks.IsKeyDown((Keys)currGame.currUserInfo.keyBinds[i]);
+                }
+            }
+            currKeyStates = newKeyStates;
+        }
+    }
+}
