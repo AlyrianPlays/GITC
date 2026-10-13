@@ -120,4 +120,17 @@ namespace GITC.Core
         echo,
         whispers
     }
+
+    // Matches the "id" values in Content/Data/companies.json
+    public enum Companies
+    {
+        swiftail,
+        priden,
+        slithiss,
+        wisdus,
+        wisdus_prior,
+        highmount_prior,
+        deepward,
+        whiteout
+    }
 }

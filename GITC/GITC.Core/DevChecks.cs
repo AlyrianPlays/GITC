@@ -22,6 +22,14 @@ namespace GITC.Core
             MissionDef sample = new MissionDef() { id = "sample", modules = { new ModuleConfig() { module = "vm", vitals = new VitalsConfig() } } };
             MissionDef back = System.Text.Json.JsonSerializer.Deserialize<MissionDef>(System.Text.Json.JsonSerializer.Serialize(sample, DataLoader.options), DataLoader.options);
             System.Diagnostics.Debug.WriteLine("DevChecks MissionDef round-trip = " + (back != null && back.modules.Count == 1 && back.modules[0].vitals.heartRate.safeMax == 110f));
+
+            // T-2.3: all 8 companies load and match the Companies enum
+            List<Company> companies = DataLoader.Load<List<Company>>("companies.json");
+            System.Diagnostics.Debug.WriteLine("DevChecks companies = " + (companies != null ? companies.Count + ": " + string.Join(", ", companies.ConvertAll(c => c.name + (c.isPrior ? " (Prior)" : "") + "/" + c.ceo)) : "<null>"));
+            if (companies != null)
+                foreach (Company c in companies)
+                    if (!Enum.TryParse<Companies>(c.id, out _))
+                        System.Diagnostics.Debug.WriteLine("DevChecks company id not in Companies enum: " + c.id);
         }
     }
 }
