@@ -25,6 +25,7 @@ namespace GITC.Core
         private SpriteFont _gameFont { get; set; }
         private RenderTarget2D _renderTarget { get; set; }
         internal Texture2D _pixelTexture { get; set; }
+        private Rectangle _viewRect { get; set; }
         private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
         /// <summary>
         /// Indicates if the game is running on a mobile platform.
@@ -110,6 +111,30 @@ namespace GITC.Core
         }
 
         /// <summary>
+        /// Destination rectangle on the back buffer for the 1920x1080 target: uniform scale, centered.
+        /// </summary>
+        private Rectangle GetLetterboxRect()
+        {
+            int bbWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
+            int bbHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
+            float scale = Math.Min(bbWidth / Globals.ScreenWidthLogical, bbHeight / Globals.ScreenHeightLogical);
+            int width = (int)(Globals.ScreenWidthLogical * scale);
+            int height = (int)(Globals.ScreenHeightLogical * scale);
+            return new Rectangle((bbWidth - width) / 2, (bbHeight - height) / 2, width, height);
+        }
+
+        /// <summary>
+        /// Converts a window/back-buffer point (e.g. the mouse) to 1920x1080 logical coordinates,
+        /// using the same letterbox math as Draw.
+        /// </summary>
+        internal Point ScreenToLogical(Point screenPoint)
+        {
+            Rectangle view = GetLetterboxRect();
+            return new Point((int)((screenPoint.X - view.X) * Globals.ScreenWidthLogical / view.Width),
+                             (int)((screenPoint.Y - view.Y) * Globals.ScreenHeightLogical / view.Height));
+        }
+
+        /// <summary>
         /// Releases the render target and shared pixel texture created in LoadContent.
         /// </summary>
         protected override void UnloadContent()
@@ -135,6 +160,10 @@ namespace GITC.Core
             // TODO: Add your update logic here
             currGameState.Update(gameTime);
 
+            //TESTING, REMOVE AFTER: verify window-to-logical mouse mapping
+            if (currGameState.currMouseState.LeftButton == ButtonState.Pressed && currGameState.lastMouseState.LeftButton == ButtonState.Released)
+                System.Diagnostics.Debug.WriteLine("Click logical: " + ScreenToLogical(currGameState.currMouseState.Position));
+
             base.Update(gameTime);
         }
 
@@ -158,30 +187,16 @@ namespace GITC.Core
             //Reuse the RenderTarget2D (1920x1080) created in LoadContent
             RenderTarget2D renderTarget = _renderTarget;
 
-            //Scale the render target to fit the window
-            //TODO: Change the global reference to user-selected dimensions
-            float scaleFactorX = (float)Globals.DisplayWidth / (float)renderTarget.Width;
-            //float scaleFactorX = 960 / (float)renderTarget.Width;
-            float scaleFactorY = (float)Globals.DisplayHeight / (float)renderTarget.Height;
-            //float scaleFactorY = 540 / (float)renderTarget.Height;
+            //Deprecated: stretched the target separately in X and Y to the display (distorted non-16:9 windows)
+            //float scaleFactorX = (float)Globals.DisplayWidth / (float)renderTarget.Width;
+            //float scaleFactorY = (float)Globals.DisplayHeight / (float)renderTarget.Height;
+            //Matrix scaleMatrix = Matrix.CreateScale(scaleFactorX, scaleFactorY, 1);
 
-            Matrix scaleMatrix = Matrix.CreateScale(scaleFactorX, scaleFactorY, 1);
-
+            //Draw the whole scene (HUD, console) into the 1920x1080 logical target
             GraphicsDevice.SetRenderTarget(renderTarget);
             GraphicsDevice.Clear(Color.Black);
 
-            //Revised SpriteBatch Begin
-            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-
-            _spriteBatch.End();
-
-            //Reset RenderTarget
-            GraphicsDevice.SetRenderTarget(null);
-
-            
-
-            _spriteBatch.Begin(samplerState: SamplerState.AnisotropicClamp, transformMatrix: scaleMatrix);
-            _spriteBatch.Draw(renderTarget, Vector2.Zero, Color.White);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
             // Draw background elements
             foreach (String s in _backgroundGameTextures.Keys)
@@ -215,6 +230,16 @@ namespace GITC.Core
             _spriteBatch.Draw(cursTexture,cursRect,Color.White);
 
             _spriteBatch.End();
+
+            //Reset RenderTarget and draw the target to the back buffer, uniformly scaled and letterboxed
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+
+            _viewRect = GetLetterboxRect();
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _spriteBatch.Draw(renderTarget, _viewRect, Color.White);
+            _spriteBatch.End();
+
 
             base.Draw(gameTime);
         }
