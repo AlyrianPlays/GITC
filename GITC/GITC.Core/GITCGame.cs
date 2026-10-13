@@ -23,6 +23,8 @@ namespace GITC.Core
         internal UserInfo currUserInfo { get; set; }
         internal GameState currGameState { get; set; }
         private SpriteFont _gameFont { get; set; }
+        private RenderTarget2D _renderTarget { get; set; }
+        internal Texture2D _pixelTexture { get; set; }
         private Dictionary<string, Texture2D> _backgroundGameTextures {  get; set; }
         /// <summary>
         /// Indicates if the game is running on a mobile platform.
@@ -92,6 +94,10 @@ namespace GITC.Core
         {
             _gameFont = Content.Load<SpriteFont>("Fonts/File");
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            //Created once and reused every frame (was allocated per frame in Draw)
+            _renderTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
+            _pixelTexture = new Texture2D(GraphicsDevice, 1, 1);
+            _pixelTexture.SetData(new[] { Color.White });
             // TODO: Add all textures to this load loop, based on string list or some book-keeping method
             _backgroundGameTextures = new Dictionary<string, Texture2D>()
             {
@@ -101,6 +107,16 @@ namespace GITC.Core
             graphicsDeviceManager.IsFullScreen = true;
             graphicsDeviceManager.ApplyChanges();
             base.LoadContent();
+        }
+
+        /// <summary>
+        /// Releases the render target and shared pixel texture created in LoadContent.
+        /// </summary>
+        protected override void UnloadContent()
+        {
+            _renderTarget?.Dispose();
+            _pixelTexture?.Dispose();
+            base.UnloadContent();
         }
 
         /// <summary>
@@ -139,8 +155,8 @@ namespace GITC.Core
                 textHeight++;
             }
 
-            //Create RenderTarget2D with a resolution of 1920x1080
-            RenderTarget2D renderTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
+            //Reuse the RenderTarget2D (1920x1080) created in LoadContent
+            RenderTarget2D renderTarget = _renderTarget;
 
             //Scale the render target to fit the window
             //TODO: Change the global reference to user-selected dimensions
@@ -188,8 +204,7 @@ namespace GITC.Core
             }
 
             // Cursor
-            Texture2D cursTexture = new Texture2D(GraphicsDevice, 1, 1);
-            cursTexture.SetData(new[] { Color.White });
+            Texture2D cursTexture = _pixelTexture;
             Rectangle cursRect = new Rectangle(new Point((currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))).Length * textWidth) + GameState.CONSOLEMINWIDTH,
                                                          (textHeight / 4) * 3 + GameState.CONSOLEMAXHEIGHT),
                                                          //OLD METHOD: Chases newlines, typical console buffer
@@ -200,9 +215,6 @@ namespace GITC.Core
             _spriteBatch.Draw(cursTexture,cursRect,Color.White);
 
             _spriteBatch.End();
-
-            // Dispose of the render target
-            renderTarget.Dispose();
 
             base.Draw(gameTime);
         }
