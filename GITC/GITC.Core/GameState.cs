@@ -24,10 +24,12 @@ namespace GITC.Core
         public List<Sprite> activeSprites { get; set; }
         public List<Sprite> elementSprites { get; set; }
         public GameStates currentGameState { get; set; }
-        public MouseState currMouseState { get; set; }
-        public MouseState lastMouseState { get; set; }
-        public List<bool> currKeyStates { get; set; }
-        public List<bool> lastKeyStates { get; set; }
+        public InputManager input { get; set; }
+        // Pass-throughs to InputManager, kept so existing callers keep working
+        public MouseState currMouseState { get { return input.currMouseState; } }
+        public MouseState lastMouseState { get { return input.lastMouseState; } }
+        public List<bool> currKeyStates { get { return input.currKeyStates; } }
+        public List<bool> lastKeyStates { get { return input.lastKeyStates; } }
         public double currGameTime { get; set; }
         public double lastGameTime { get; set; }
         public GITCGame currGame { get; set; }
@@ -42,14 +44,8 @@ namespace GITC.Core
 
         public GameState(GITCGame currGame)
         {
-            currKeyStates = new List<bool>();
-            lastKeyStates = new List<bool>();
-            for (int i = 0; i < Enum.GetValues(typeof(KeyBinds)).Length + Enum.GetNames(typeof(WeirdKeys)).Length; i++)
-            {
-                currKeyStates.Add(false);
-                lastKeyStates.Add(false);
-            }
             this.currGame = currGame;
+            input = new InputManager(currGame);
             consoleToken = "USER:> ";
             consoleHistory = new String[CONSOLEHISTORY_SIZE];
             userText = new StringBuilder(consoleToken);
@@ -68,7 +64,12 @@ namespace GITC.Core
             currGameTime = gameTime.TotalGameTime.TotalMilliseconds;
 
             // Set key states
-            SetKeyStates();
+            input.Update();
+
+            //TESTING, REMOVE AFTER: confirm Pressed fires once per key press
+            foreach (KeyBinds kb in Enum.GetValues(typeof(KeyBinds)))
+                if (input.Pressed(kb))
+                    System.Diagnostics.Debug.WriteLine("Pressed " + kb);
 
             // Update game state logic here
             switch (currentGameState)
@@ -87,6 +88,9 @@ namespace GITC.Core
                 default:
                     break;
             }
+
+            // Nothing drains the typed queue yet (console still uses OnTextInput); T-5.1 moves that over
+            input.ClearTyped();
         }
 
         internal void OnTextInput(object sender, TextInputEventArgs e)
@@ -183,54 +187,55 @@ namespace GITC.Core
             double deltaTime = currGameTime - lastGameTime;
         }
 
-        //Get all relevant keyboard IsKeyDown states
-        public void SetKeyStates()
-        {
-            List<bool> newKeyStates = new List<bool>();
-            lastKeyStates = currKeyStates;
-            KeyboardState ks = Keyboard.GetState();
+        //Deprecated: replaced by InputManager.Update (T-1.5)
+        //        //Get all relevant keyboard IsKeyDown states
+        //        public void SetKeyStates()
+        //        {
+        //            List<bool> newKeyStates = new List<bool>();
+        //            lastKeyStates = currKeyStates;
+        //            KeyboardState ks = Keyboard.GetState();
 
-            //Get mouse positional and click information
-            lastMouseState = currMouseState;
-            currMouseState = Mouse.GetState();
+        //            //Get mouse positional and click information
+        //            lastMouseState = currMouseState;
+        //            currMouseState = Mouse.GetState();
 
-            //GOLDEN FORMULA FOR SCALING MOUSE POSITION, NEVER LOSE THIS!!!
-            Vector2 scaledMousePosition = new Vector2(((currMouseState.X) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.X) - (currGame.currCamera._viewportWidth / 2) / currGame.currCamera.Zoom),
-                                              ((currMouseState.Y) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.Y) - (currGame.currCamera._viewportHeight / 2) / currGame.currCamera.Zoom));
+        //            //GOLDEN FORMULA FOR SCALING MOUSE POSITION, NEVER LOSE THIS!!!
+        //            Vector2 scaledMousePosition = new Vector2(((currMouseState.X) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.X) - (currGame.currCamera._viewportWidth / 2) / currGame.currCamera.Zoom),
+        //                                              ((currMouseState.Y) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.Y) - (currGame.currCamera._viewportHeight / 2) / currGame.currCamera.Zoom));
 
-            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count + Enum.GetNames(typeof(WeirdKeys)).Length; i++)
-            {
-                newKeyStates.Add(false);
-            }
+        //            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count + Enum.GetNames(typeof(WeirdKeys)).Length; i++)
+        //            {
+        //                newKeyStates.Add(false);
+        //            }
 
-            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count; i++)
-            {
-                if (currGame.currUserInfo.keyBinds[i] >= (int)WeirdKeys.leftclick)
-                {
-                    switch (currGame.currUserInfo.keyBinds[i])
-                    {
-                        case (int)WeirdKeys.leftclick:
-                            newKeyStates[i] = currMouseState.LeftButton == ButtonState.Pressed;
-                            break;
-                        case (int)WeirdKeys.rightclick:
-                            newKeyStates[i] = currMouseState.RightButton == ButtonState.Pressed;
-                            break;
-                        case (int)WeirdKeys.scroll_up:
-                            newKeyStates[i] = currMouseState.ScrollWheelValue > lastMouseState.ScrollWheelValue;
-                            break;
-                        case (int)WeirdKeys.scroll_down:
-                            newKeyStates[i] = currMouseState.ScrollWheelValue < lastMouseState.ScrollWheelValue;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                else
-                {
-                    newKeyStates[i] = ks.IsKeyDown((Keys)currGame.currUserInfo.keyBinds[i]);
-                }
-            }
-            currKeyStates = newKeyStates;
-        }
+        //            for (int i = 0; i < currGame.currUserInfo.keyBinds.Count; i++)
+        //            {
+        //                if (currGame.currUserInfo.keyBinds[i] >= (int)WeirdKeys.leftclick)
+        //                {
+        //                    switch (currGame.currUserInfo.keyBinds[i])
+        //                    {
+        //                        case (int)WeirdKeys.leftclick:
+        //                            newKeyStates[i] = currMouseState.LeftButton == ButtonState.Pressed;
+        //                            break;
+        //                        case (int)WeirdKeys.rightclick:
+        //                            newKeyStates[i] = currMouseState.RightButton == ButtonState.Pressed;
+        //                            break;
+        //                        case (int)WeirdKeys.scroll_up:
+        //                            newKeyStates[i] = currMouseState.ScrollWheelValue > lastMouseState.ScrollWheelValue;
+        //                            break;
+        //                        case (int)WeirdKeys.scroll_down:
+        //                            newKeyStates[i] = currMouseState.ScrollWheelValue < lastMouseState.ScrollWheelValue;
+        //                            break;
+        //                        default:
+        //                            break;
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    newKeyStates[i] = ks.IsKeyDown((Keys)currGame.currUserInfo.keyBinds[i]);
+        //                }
+        //            }
+        //            currKeyStates = newKeyStates;
+        //        }
     }
 }
