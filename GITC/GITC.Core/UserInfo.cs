@@ -56,28 +56,27 @@ namespace GITC.Core
             iSettings[(int)ISettings.resolution_y] = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
 
             
-            keyBinds[(int)KeyBinds.inventory] = (int)Keys.B;
-            keyBinds[(int)KeyBinds.map] = (int)Keys.M;
-            keyBinds[(int)KeyBinds.moveleft] = (int)Keys.A;
-            keyBinds[(int)KeyBinds.moveright] = (int)Keys.D;
-            keyBinds[(int)KeyBinds.movedown] = (int)Keys.S;
-            keyBinds[(int)KeyBinds.moveup] = (int)Keys.W;
-            keyBinds[(int)KeyBinds.jump] = (int)Keys.Space;
-            keyBinds[(int)KeyBinds.interact] = (int)Keys.E;
+            keyBinds[(int)KeyBinds.fav_left] = (int)Keys.A;
+            keyBinds[(int)KeyBinds.fav_right] = (int)Keys.D;
+            keyBinds[(int)KeyBinds.fav_hide] = (int)Keys.S;
+            keyBinds[(int)KeyBinds.fav_jump] = (int)Keys.Space;
+            keyBinds[(int)KeyBinds.lvm_up] = (int)Keys.W;
+            keyBinds[(int)KeyBinds.lvm_down] = (int)Keys.S;
+            keyBinds[(int)KeyBinds.lvm_left] = (int)Keys.A;
+            keyBinds[(int)KeyBinds.lvm_right] = (int)Keys.D;
+            keyBinds[(int)KeyBinds.focus_tim] = (int)Keys.F1;
+            keyBinds[(int)KeyBinds.focus_fav] = (int)Keys.F2;
+            keyBinds[(int)KeyBinds.focus_lvm] = (int)Keys.F3;
+            keyBinds[(int)KeyBinds.focus_vm] = (int)Keys.F4;
             keyBinds[(int)KeyBinds.settings] = (int)Keys.Escape;
-            keyBinds[(int)KeyBinds.attack] = (int)WeirdKeys.leftclick;
-            keyBinds[(int)KeyBinds.drinktea] = (int)WeirdKeys.rightclick;
 
             statMod[(int)UserStats.health] = 5;
             statMod[(int)UserStats.max_health] = 5;
-            statMod[(int)UserStats.tea] = 10;
-            statMod[(int)UserStats.max_tea] = 10;
-            statMod[(int)UserStats.damage] = 1;
-            statMod[(int)UserStats.armor] = 0;
+            statMod[(int)UserStats.operator_points] = 100;
+            statMod[(int)UserStats.max_operator_points] = 100;
             statMod[(int)UserStats.speed] = 5;
             statMod[(int)UserStats.jump_height] = 5;
-            statMod[(int)UserStats.attack_speed] = 5;
-            statMod[(int)UserStats.attack_range] = 5;
+            //Deprecated: BestTea defaults (tea, damage, armor, attack_speed, attack_range)
 
             movement[(int)UserMovement.velocity_x] = 0f;
             movement[(int)UserMovement.max_velocity_x] = Globals.ScreenWidthLogical / 4f; // pixels / second

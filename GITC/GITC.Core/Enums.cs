@@ -11,13 +11,15 @@ namespace GITC.Core
         idle,
         moveleft,
         moveright,
-        moveup,
-        movedown,
+        //Deprecated: BestTea top-down/combat states, not used by the FAV side-scroller
+        //moveup,
+        //movedown,
         jump,
-        attack,
-        drinktea,
-        specialattack,
-        interact
+        //attack,
+        //drinktea,
+        //specialattack,
+        interact,
+        hide
     }
 
     public enum SpriteType
@@ -51,14 +53,17 @@ namespace GITC.Core
     {
         health,
         max_health,
-        tea,
-        max_tea,
-        damage,
-        armor,
+        operator_points,
+        max_operator_points,
         speed,
-        jump_height,
-        attack_speed,
-        attack_range
+        jump_height
+        //Deprecated: BestTea stats, not used by GITC
+        //tea,
+        //max_tea,
+        //damage,
+        //armor,
+        //attack_speed,
+        //attack_range
     }
 
     public enum UserMovement
@@ -73,18 +78,31 @@ namespace GITC.Core
 
     public enum KeyBinds
     {
-        moveleft,
-        moveright,
-        moveup,
-        movedown,
-        jump,
-        attack,
-        drinktea,
-        specialattack,
-        interact,
-        settings,
-        inventory,
-        map
+        fav_left,
+        fav_right,
+        fav_hide,
+        fav_jump,
+        lvm_up,
+        lvm_down,
+        lvm_left,
+        lvm_right,
+        focus_tim,
+        focus_fav,
+        focus_lvm,
+        focus_vm,
+        settings
+        //Deprecated: BestTea keybinds, replaced by the module-specific binds above
+        //moveleft,
+        //moveright,
+        //moveup,
+        //movedown,
+        //jump,
+        //attack,
+        //drinktea,
+        //specialattack,
+        //interact,
+        //inventory,
+        //map
     }
 
     public enum WeirdKeys
