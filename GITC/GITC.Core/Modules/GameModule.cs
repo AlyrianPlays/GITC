@@ -35,6 +35,11 @@ namespace GITC.Core
         // Runs only while focused
         public abstract void HandleInput(InputManager input);
 
+        // Called for every event raised on the ModuleManager, whichever module raised it (including this one)
+        public virtual void OnEvent(ModuleEvent moduleEvent)
+        {
+        }
+
         // Drawn with a scissor rectangle set to region; draw in logical coordinates
         public abstract void Draw(SpriteBatch spriteBatch);
     }

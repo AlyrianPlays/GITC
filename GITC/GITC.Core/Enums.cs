@@ -143,4 +143,22 @@ namespace GITC.Core
         him,
         pm
     }
+
+    // Messages passed between modules through ModuleManager (see ModuleEvent)
+    public enum ModuleEventTypes
+    {
+        op_penalty,
+        op_gain,
+        command_required,
+        command_satisfied,
+        command_failed,
+        agent_died,
+        agent_revived,
+        him_started,
+        him_ended,
+        maze_failed,
+        maze_completed,
+        vital_critical,
+        time_expired
+    }
 }
