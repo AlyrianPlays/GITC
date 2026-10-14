@@ -31,6 +31,7 @@ namespace GITC.Core
         public SaveManager saveManager { get; set; }
         // True once the end of currMission has been recorded in the save
         private bool missionReported { get; set; }
+        public MissionResultScreen resultScreen { get; set; }
         private KeyboardState lastDebugKeys { get; set; }
         // Pass-throughs to InputManager, kept so existing callers keep working
         public MouseState currMouseState { get { return input.currMouseState; } }
@@ -56,6 +57,7 @@ namespace GITC.Core
             saveManager = new SaveManager();
             saveManager.Load();
             StartDebugMission();
+            resultScreen = new MissionResultScreen(currGame);
             consoleToken = "USER:> ";
             consoleHistory = new String[CONSOLEHISTORY_SIZE];
             userText = new StringBuilder(consoleToken);
@@ -71,8 +73,17 @@ namespace GITC.Core
         private void StartDebugMission()
         {
             MissionDef debugDef = new MissionDef() { id = "debug_mission", companyId = "swiftail", name = "Debug mission", durationSeconds = 60, startingOps = 30 };
+            //TESTING: env var GITC_DEBUGSECONDS shortens the mission so the end screens can be reached without keys
+            if (int.TryParse(Environment.GetEnvironmentVariable("GITC_DEBUGSECONDS"), out int debugSeconds))
+                debugDef.durationSeconds = debugSeconds;
             currMission = new Mission(currGame, debugDef);
             missionReported = false;
+        }
+
+        private void ReturnToOverworld()
+        {
+            currMission = null;
+            currentGameState = GameStates.overworld;
         }
 
         public void Update(GameTime gameTime)
@@ -122,6 +133,14 @@ namespace GITC.Core
                     PlayHandler(gameTime);
                     break;
                 case GameStates.mainmenu:
+                    break;
+                case GameStates.overworld:
+                    //TESTING, REMOVE AFTER: Enter restarts the debug mission until the real overworld exists (T-11.1)
+                    if (input.Pressed(KeyBinds.confirm))
+                    {
+                        StartDebugMission();
+                        currentGameState = GameStates.play;
+                    }
                     break;
                 case GameStates.interact:
                     break;
@@ -249,6 +268,10 @@ namespace GITC.Core
                     saveManager.OnMissionEnded(currMission.def.id, currMission.status == MissionStatus.won, currMission.operatorPoints, currMission.def.unlocks);
                 System.Diagnostics.Debug.WriteLine("Mission " + currMission.def.id + " " + currMission.status + " with " + currMission.operatorPoints + " OP");
             }
+
+            // Result screen is up: Enter returns to the overworld stub
+            if (currMission.status != MissionStatus.running && input.Pressed(KeyBinds.confirm))
+                ReturnToOverworld();
         }
 
         // Draws the modules (call with no SpriteBatch open)
@@ -261,6 +284,19 @@ namespace GITC.Core
         // Drawn last, over everything (call with no SpriteBatch open)
         public void DrawOverlay(SpriteBatch spriteBatch)
         {
+            if (currMission != null && currMission.status != MissionStatus.running && currentGameState == GameStates.play)
+                resultScreen.Draw(spriteBatch, currMission);
+
+            if (currentGameState == GameStates.overworld)
+            {
+                SpriteFont stubFont = currGame._content.GetFont(ContentRegistry.DEFAULTFONT);
+                string stub = "OVERWORLD (stub) - press Enter to start the debug mission";
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+                spriteBatch.Draw(currGame._content.pixel, new Microsoft.Xna.Framework.Rectangle(0, 0, 1920, 1080), Microsoft.Xna.Framework.Color.Black * 0.6f);
+                spriteBatch.DrawString(stubFont, stub, new Vector2(960 - stubFont.MeasureString(stub).X / 2, 520), Microsoft.Xna.Framework.Color.White);
+                spriteBatch.End();
+            }
+
             if (currentGameState != GameStates.pause)
                 return;
             SpriteFont font = currGame._content.GetFont(ContentRegistry.DEFAULTFONT);

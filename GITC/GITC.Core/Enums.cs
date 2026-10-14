@@ -93,7 +93,8 @@ namespace GITC.Core
         focus_fav,
         focus_lvm,
         focus_vm,
-        settings
+        settings,
+        confirm
         //Deprecated: BestTea keybinds, replaced by the module-specific binds above
         //moveleft,
         //moveright,

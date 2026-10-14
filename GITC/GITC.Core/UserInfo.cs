@@ -69,6 +69,7 @@ namespace GITC.Core
             keyBinds[(int)KeyBinds.focus_lvm] = (int)Keys.F3;
             keyBinds[(int)KeyBinds.focus_vm] = (int)Keys.F4;
             keyBinds[(int)KeyBinds.settings] = (int)Keys.Escape;
+            keyBinds[(int)KeyBinds.confirm] = (int)Keys.Enter;
 
             statMod[(int)UserStats.health] = 5;
             statMod[(int)UserStats.max_health] = 5;
