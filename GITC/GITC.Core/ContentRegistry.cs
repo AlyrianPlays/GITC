@@ -31,7 +31,9 @@ namespace GITC.Core
         public static readonly Dictionary<string, string> textureManifest = new Dictionary<string, string>()
         {
             { "hud", "HUD" },
-            { "hud_screen_overlay", "HUD_ScreenOverlay" }
+            { "hud_screen_overlay", "HUD_ScreenOverlay" },
+            // Company logos (key = Company.logoKey in companies.json)
+            { "logo_fox", "Logo_Swiftail" }
         };
         public static readonly Dictionary<string, string> fontManifest = new Dictionary<string, string>()
         {
