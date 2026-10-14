@@ -159,6 +159,26 @@ namespace GITC.Core
             for (int i = 0; i < 10; i++) vm.Update(1f);
             System.Diagnostics.Debug.WriteLine("DevChecks vitals: temp after 1s=" + tempAt1 + ", HR state=" + hrState + ", alive at 3s=" + aliveAt3 + ", outOfRange after recovery=" + outAfter + ", clamped HR=" + clamped + ", criticals=" + criticals + " (" + critWhat.Trim() + "), deaths=" + deaths + " (" + deathWhat + "), dead=" + vm.isDead);
 
+            // T-6.2: the VM module turns the model into events and takes nudges from events
+            Mission vmMission = new Mission(game, new MissionDef() { id = "debug_vm", durationSeconds = 60, startingOps = 30 });
+            string vmSeen = "";
+            System.Action<ModuleEvent> vmPrev = vmMission.moduleManager.eventHandler;
+            vmMission.moduleManager.eventHandler = e => { vmSeen += e.type + (e.tag.Length > 0 ? ":" + e.tag : "") + " "; vmPrev(e); };
+            VMModule vmModule = (VMModule)vmMission.moduleManager.Get(ModuleTypes.vm);
+            vmMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, 600, "heart_rate"));
+            SimulateSeconds(game, vmMission, 1);
+            float hrAfterNudge = vmModule.model.Get(Vitals.heart_rate).value;
+            SimulateSeconds(game, vmMission, 12);
+            System.Diagnostics.Debug.WriteLine("DevChecks VM module: HR after +60 nudge=" + hrAfterNudge + ", events seen: " + vmSeen.Trim() + ", dead=" + vmModule.model.isDead + ", ECG wave peak=" + VMModule.EcgWave(0.235f).ToString("0.00") + " baseline=" + VMModule.EcgWave(0.7f).ToString("0.00"));
+
+            // Visual aid: GITC_DEVVITALS=1 pushes the running debug mission's vitals into warning/critical so the monitor can be seen
+            if (Environment.GetEnvironmentVariable("GITC_DEVVITALS") == "1")
+            {
+                game.currGameState.currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, 450, "heart_rate"));
+                game.currGameState.currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, -15, "temperature"));
+                game.currGameState.currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, -400, "sanity"));
+            }
+
             // T-5.6: timed command challenges (simulated, 1 second per frame)
             Mission chal = new Mission(game, new MissionDef() { id = "debug_challenge", durationSeconds = 60, startingOps = 30 });
             TIMModule chalTim = (TIMModule)chal.moduleManager.Get(ModuleTypes.tim);

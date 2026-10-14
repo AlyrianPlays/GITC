@@ -31,7 +31,7 @@ namespace GITC.Core
             status = MissionStatus.running;
             theme = CompanyTheme.FromCompany(def.companyId);
 
-            moduleManager = new ModuleManager(currGame);
+            moduleManager = new ModuleManager(currGame, def);
             moduleManager.eventHandler = HandleEvent;
             moduleManager.AddModule(new PMModule(currGame, this));
         }

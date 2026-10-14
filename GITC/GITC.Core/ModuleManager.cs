@@ -21,7 +21,8 @@ namespace GITC.Core
 
         private static readonly RasterizerState scissorState = new RasterizerState() { ScissorTestEnable = true, CullMode = CullMode.None };
 
-        public ModuleManager(GITCGame currGame)
+        // def is the mission being built (null gives default module settings)
+        public ModuleManager(GITCGame currGame, MissionDef def = null)
         {
             this.currGame = currGame;
             modules = new List<GameModule>();
@@ -32,7 +33,8 @@ namespace GITC.Core
             modules.Add(new TIMModule(currGame));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.fav, HudLayout.FAV, Color.Orange));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.lvm, HudLayout.LVM, Color.Lime));
-            modules.Add(new PlaceholderModule(currGame, ModuleTypes.vm, HudLayout.VM, Color.Magenta));
+            ModuleConfig vmConfig = def?.modules.Find(m => m.module == "vm");
+            modules.Add(new VMModule(currGame, vmConfig?.vitals ?? new VitalsConfig()));
 
             foreach (GameModule m in modules)
                 m.manager = this;
