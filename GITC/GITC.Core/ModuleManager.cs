@@ -29,7 +29,7 @@ namespace GITC.Core
             inputLocked = false;
 
             //TESTING, REMOVE AFTER: placeholders until each real module exists
-            modules.Add(new PlaceholderModule(currGame, ModuleTypes.tim, HudLayout.TIM, Color.Cyan));
+            modules.Add(new TIMModule(currGame));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.fav, HudLayout.FAV, Color.Orange));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.lvm, HudLayout.LVM, Color.Lime));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.vm, HudLayout.VM, Color.Magenta));

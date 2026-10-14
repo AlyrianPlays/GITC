@@ -43,15 +43,15 @@ namespace GITC.Core
         public double currGameTime { get; set; }
         public double lastGameTime { get; set; }
         public GITCGame currGame { get; set; }
-        public StringBuilder userText { get; set; }
-        public String consoleToken { get; set;  }
-        public String[] consoleHistory { get; set; }
-        public const int CONSOLEHISTORY_SIZE = 27;
-        public const int CONSOLEWRITELINE_SIZE = 102-11;
-        public const int CONSOLEMAXHEIGHT = 63*8;
-        public const int CONSOLEMINWIDTH = 11*8;
-        public const int CONSOLEMAXWIDTH = 102*8;
-
+        //Deprecated: the console moved into TIMModule (T-5.1)
+        //public StringBuilder userText { get; set; }
+        //public String consoleToken { get; set;  }
+        //public String[] consoleHistory { get; set; }
+        //public const int CONSOLEHISTORY_SIZE = 27;
+        //public const int CONSOLEWRITELINE_SIZE = 102-11;
+        //public const int CONSOLEMAXHEIGHT = 63*8;
+        //public const int CONSOLEMINWIDTH = 11*8;
+        //public const int CONSOLEMAXWIDTH = 102*8;
         public GameState(GITCGame currGame)
         {
             this.currGame = currGame;
@@ -61,11 +61,12 @@ namespace GITC.Core
             saveManager.Load();
             StartDebugMission();
             resultScreen = new MissionResultScreen(currGame);
-            consoleToken = "USER:> ";
-            consoleHistory = new String[CONSOLEHISTORY_SIZE];
-            userText = new StringBuilder(consoleToken);
-            // Subscribe to the text input event
-            currGame.Window.TextInput += OnTextInput;
+            //Deprecated: console state moved into TIMModule (T-5.1)
+        //    consoleToken = "USER:> ";
+        //    consoleHistory = new String[CONSOLEHISTORY_SIZE];
+        //    userText = new StringBuilder(consoleToken);
+        //    // Subscribe to the text input event
+        //    currGame.Window.TextInput += OnTextInput;
             //testing
             mainChar = new Sprite();
             currentGameState = GameStates.play;
@@ -158,103 +159,104 @@ namespace GITC.Core
                     break;
             }
 
-            // Nothing drains the typed queue yet (console still uses OnTextInput); T-5.1 moves that over
+            // TIMModule drains the typed queue while it is focused; whatever is left is dropped here
             input.ClearTyped();
         }
 
-        internal void OnTextInput(object sender, TextInputEventArgs e)
-        {
-            // Typing only reaches the console while the TIM is focused (D2); T-5.1 moves the console into TIMModule
-            if (currentGameState != GameStates.play || currMission == null || currMission.status != MissionStatus.running
-                || moduleManager.focusedModule != ModuleTypes.tim)
-                return;
+        //Deprecated: the console moved into TIMModule (T-5.1)
+        //internal void OnTextInput(object sender, TextInputEventArgs e)
+        //{
+        //    // Typing only reaches the console while the TIM is focused (D2); T-5.1 moves the console into TIMModule
+        //    if (currentGameState != GameStates.play || currMission == null || currMission.status != MissionStatus.running
+        //        || moduleManager.focusedModule != ModuleTypes.tim)
+        //        return;
 
-            // Handle Backspace
-            if (e.Key == Microsoft.Xna.Framework.Input.Keys.Back)
-            {
-                if (userText.Length > consoleToken.Length)
-                {
-                    if (userText.ToString().EndsWith(Environment.NewLine))
-                    {
-                        userText.Remove(userText.Length - Environment.NewLine.Length, Environment.NewLine.Length);
-                    }
-                    if (userText.ToString().Replace(Environment.NewLine, "").Length > consoleToken.Length) 
-                    {
-                        userText.Remove(userText.Length - 1, 1);
-                    }
-                }
-            }
-            // Handle Enter/Return if you want to submit text
-            else if (e.Key == Microsoft.Xna.Framework.Input.Keys.Enter)
-            {
-                SubmitText();
-            }
-            // Append valid character typing (filters out unprintable keys automatically)
-            else if (e.Character != '\0' && !char.IsControl(e.Character))
-            {
-                if (userText.Length > 0 && userText.ToString().Replace(Environment.NewLine,"").Length % CONSOLEWRITELINE_SIZE == 0)
-                {
-                    userText.Append(Environment.NewLine);
-                }
-                userText.Append(e.Character);
-            }
-        }
+        //    // Handle Backspace
+        //    if (e.Key == Microsoft.Xna.Framework.Input.Keys.Back)
+        //    {
+        //        if (userText.Length > consoleToken.Length)
+        //        {
+        //            if (userText.ToString().EndsWith(Environment.NewLine))
+        //            {
+        //                userText.Remove(userText.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+        //            }
+        //            if (userText.ToString().Replace(Environment.NewLine, "").Length > consoleToken.Length) 
+        //            {
+        //                userText.Remove(userText.Length - 1, 1);
+        //            }
+        //        }
+        //    }
+        //    // Handle Enter/Return if you want to submit text
+        //    else if (e.Key == Microsoft.Xna.Framework.Input.Keys.Enter)
+        //    {
+        //        SubmitText();
+        //    }
+        //    // Append valid character typing (filters out unprintable keys automatically)
+        //    else if (e.Character != '\0' && !char.IsControl(e.Character))
+        //    {
+        //        if (userText.Length > 0 && userText.ToString().Replace(Environment.NewLine,"").Length % CONSOLEWRITELINE_SIZE == 0)
+        //        {
+        //            userText.Append(Environment.NewLine);
+        //        }
+        //        userText.Append(e.Character);
+        //    }
+        //}
 
-        public static int GetLineCount(string input)
-        {
-            if (string.IsNullOrEmpty(input)) return 0;
+        //public static int GetLineCount(string input)
+        //{
+        //    if (string.IsNullOrEmpty(input)) return 0;
 
-            int count = 1;
-            int index = 0;
+        //    int count = 1;
+        //    int index = 0;
 
-            while ((index = input.IndexOf('\n', index)) != -1)
-            {
-                count++;
-                index++;
-            }
+        //    while ((index = input.IndexOf('\n', index)) != -1)
+        //    {
+        //        count++;
+        //        index++;
+        //    }
 
-            return count;
-        }
-        private void SubmitText()
-        {
-            int userLineNum = GetLineCount(userText.ToString());
-            string[] userLines = userText.ToString().Split(Environment.NewLine);
-            for (int k = 0; k < userLineNum; k++)
-            {
-                for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
-                {
-                    consoleHistory[i] = consoleHistory[i - 1];
-                }
-                consoleHistory[0] = userLines[k];
-            }
-            ProcessCommand();
-            userText.Clear();
-            userText = new StringBuilder(consoleToken);
-        }
+        //    return count;
+        //}
+        //private void SubmitText()
+        //{
+        //    int userLineNum = GetLineCount(userText.ToString());
+        //    string[] userLines = userText.ToString().Split(Environment.NewLine);
+        //    for (int k = 0; k < userLineNum; k++)
+        //    {
+        //        for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
+        //        {
+        //            consoleHistory[i] = consoleHistory[i - 1];
+        //        }
+        //        consoleHistory[0] = userLines[k];
+        //    }
+        //    ProcessCommand();
+        //    userText.Clear();
+        //    userText = new StringBuilder(consoleToken);
+        //}
 
-        private void ProcessCommand()
-        {
-            string command = userText.ToString().Remove(0,consoleToken.Length).Split(' ')[0];
-            string args = string.Join(' ',userText.ToString().Remove(0, consoleToken.Length).Split(' ')[1..]);
-            if (Enum.GetNames<Commands>().Contains(command))
-            {
-                switch (Enum.Parse(typeof(Commands), command))
-                {
-                    case Commands.echo:
-                        string[] outputLines = string.Join(Environment.NewLine, Enumerable.Range(0, (args.Length + CONSOLEWRITELINE_SIZE - 1) / CONSOLEWRITELINE_SIZE).Select(i => args.ToString().Substring(i * CONSOLEWRITELINE_SIZE, Math.Min(CONSOLEWRITELINE_SIZE, args.Length - i * CONSOLEWRITELINE_SIZE)))).Split(Environment.NewLine);
-                        int outputLineNum = GetLineCount(string.Join(Environment.NewLine,outputLines));
-                        for (int k = 0; k < outputLineNum; k++)
-                        {
-                            for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
-                            {
-                                consoleHistory[i] = consoleHistory[i - 1];
-                            }
-                            consoleHistory[0] = outputLines[k];
-                        }
-                        break;
-                }
-            }
-        }
+        //private void ProcessCommand()
+        //{
+        //    string command = userText.ToString().Remove(0,consoleToken.Length).Split(' ')[0];
+        //    string args = string.Join(' ',userText.ToString().Remove(0, consoleToken.Length).Split(' ')[1..]);
+        //    if (Enum.GetNames<Commands>().Contains(command))
+        //    {
+        //        switch (Enum.Parse(typeof(Commands), command))
+        //        {
+        //            case Commands.echo:
+        //                string[] outputLines = string.Join(Environment.NewLine, Enumerable.Range(0, (args.Length + CONSOLEWRITELINE_SIZE - 1) / CONSOLEWRITELINE_SIZE).Select(i => args.ToString().Substring(i * CONSOLEWRITELINE_SIZE, Math.Min(CONSOLEWRITELINE_SIZE, args.Length - i * CONSOLEWRITELINE_SIZE)))).Split(Environment.NewLine);
+        //                int outputLineNum = GetLineCount(string.Join(Environment.NewLine,outputLines));
+        //                for (int k = 0; k < outputLineNum; k++)
+        //                {
+        //                    for (int i = CONSOLEHISTORY_SIZE - 1; i > 0; i--)
+        //                    {
+        //                        consoleHistory[i] = consoleHistory[i - 1];
+        //                    }
+        //                    consoleHistory[0] = outputLines[k];
+        //                }
+        //                break;
+        //        }
+        //    }
+        //}
         public void PlayHandler(GameTime gameTime)
         {
             // Time since last frame

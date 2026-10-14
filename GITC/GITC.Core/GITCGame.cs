@@ -252,15 +252,15 @@ namespace GITC.Core
         /// </param>
         protected override void Draw(GameTime gameTime)
         {
-            //Text variables
-            Vector2 fontSize = _gameFont.MeasureString("H");
-            int textWidth = (int)fontSize.X;
-            int textHeight = (int)fontSize.Y;
-            while (textHeight % textWidth != 0)
-            {
-                textHeight++;
-            }
-
+            //Deprecated: console metrics moved into TIMModule.Draw (T-5.1)
+        //    //Text variables
+        //    Vector2 fontSize = _gameFont.MeasureString("H");
+        //    int textWidth = (int)fontSize.X;
+        //    int textHeight = (int)fontSize.Y;
+        //    while (textHeight % textWidth != 0)
+        //    {
+        //        textHeight++;
+        //    }
             //Reuse the RenderTarget2D (1920x1080) created in LoadContent
             RenderTarget2D renderTarget = _renderTarget;
 
@@ -293,25 +293,25 @@ namespace GITC.Core
             currGameState.Draw(_spriteBatch);
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
-            // Draw the accumulating string buffer
-            _spriteBatch.DrawString(_gameFont, currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT), Color.White);
-            for (int i = 0; i < GameState.CONSOLEHISTORY_SIZE; i++)
-            {
-                if (currGameState.consoleHistory[i] != null)
-                    _spriteBatch.DrawString(_gameFont, currGameState.consoleHistory[i].ToString(), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT - (textHeight*(i+1))), Color.White);
-            }
+            //Deprecated: console drawing moved into TIMModule.Draw (T-5.1)
+        //    // Draw the accumulating string buffer
+        //    _spriteBatch.DrawString(_gameFont, currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT), Color.White);
+        //    for (int i = 0; i < GameState.CONSOLEHISTORY_SIZE; i++)
+        //    {
+        //        if (currGameState.consoleHistory[i] != null)
+        //            _spriteBatch.DrawString(_gameFont, currGameState.consoleHistory[i].ToString(), new Vector2((float)GameState.CONSOLEMINWIDTH, (float)GameState.CONSOLEMAXHEIGHT - (textHeight*(i+1))), Color.White);
+        //    }
 
-            // Cursor
-            Texture2D cursTexture = _content.pixel;
-            Rectangle cursRect = new Rectangle(new Point((currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))).Length * textWidth) + GameState.CONSOLEMINWIDTH,
-                                                         (textHeight / 4) * 3 + GameState.CONSOLEMAXHEIGHT),
-                                                         //OLD METHOD: Chases newlines, typical console buffer
-                                                         //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length % GameState.CONSOLEWRITELINE_SIZE)*textWidth) + GameState.CONSOLEMINWIDTH,
-                                                         //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length / GameState.CONSOLEWRITELINE_SIZE)*textHeight)+(textHeight/4)*3+ GameState.CONSOLEMAXHEIGHT),
-                                               new Point(textWidth,
-                                                         textHeight / 4));
-            _spriteBatch.Draw(cursTexture,cursRect,Color.White);
-
+        //    // Cursor
+        //    Texture2D cursTexture = _content.pixel;
+        //    Rectangle cursRect = new Rectangle(new Point((currGameState.userText.ToString().Replace(Environment.NewLine, "").Substring(Math.Max(0, currGameState.userText.ToString().Replace(Environment.NewLine, "").Length - (GameState.CONSOLEWRITELINE_SIZE))).Length * textWidth) + GameState.CONSOLEMINWIDTH,
+        //                                                 (textHeight / 4) * 3 + GameState.CONSOLEMAXHEIGHT),
+        //                                                 //OLD METHOD: Chases newlines, typical console buffer
+        //                                                 //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length % GameState.CONSOLEWRITELINE_SIZE)*textWidth) + GameState.CONSOLEMINWIDTH,
+        //                                                 //((currGameState.userText.ToString().Replace(Environment.NewLine, "").Length / GameState.CONSOLEWRITELINE_SIZE)*textHeight)+(textHeight/4)*3+ GameState.CONSOLEMAXHEIGHT),
+        //                                       new Point(textWidth,
+        //                                                 textHeight / 4));
+        //    _spriteBatch.Draw(cursTexture,cursRect,Color.White);
             //TESTING, REMOVE AFTER: outline the HudLayout regions to check them against HUD.png
             if (SHOWHUDDEBUG)
             {

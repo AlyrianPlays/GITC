@@ -56,6 +56,16 @@ namespace GITC.Core
                 lose.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.pm, 10));
             SimulateSeconds(game, lose, 1);
             System.Diagnostics.Debug.WriteLine("DevChecks mission lose: " + lose.status + ", OP=" + lose.operatorPoints + ", time=" + lose.timeRemaining);
+
+            // T-5.1: typed characters reach the TIM through InputManager.typedChars and echo works
+            Mission typing = new Mission(game, new MissionDef() { id = "debug_typing", durationSeconds = 60 });
+            TIMModule tim = (TIMModule)typing.moduleManager.Get(ModuleTypes.tim);
+            foreach (char c in "echo hi")
+                game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs(c, Microsoft.Xna.Framework.Input.Keys.None));
+            game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs('\r', Microsoft.Xna.Framework.Input.Keys.Enter));
+            tim.HandleInput(game.currGameState.input);
+            game.currGameState.input.ClearTyped();
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM history [0]='" + tim.consoleHistory[0] + "' [1]='" + tim.consoleHistory[1] + "'");
         }
     }
 }
