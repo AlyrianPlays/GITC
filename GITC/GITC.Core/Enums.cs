@@ -122,7 +122,10 @@ namespace GITC.Core
         changedir = 0,
         listdir,
         echo,
-        whispers
+        whispers,
+        help,
+        clear,
+        read
     }
 
     // Matches the "id" values in Content/Data/companies.json

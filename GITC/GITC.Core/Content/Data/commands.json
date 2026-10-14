@@ -1,0 +1,12 @@
+[
+  // TIM commands. Behaviour is attached in code by name (Commands/BuiltinCommands.cs).
+  // A command listed here with no handler answers "is not available yet". scope: anywhere | mission | overworld.
+  { "name": "echo",      "description": "Print text back to the console" },
+  { "name": "help",      "description": "List the commands you can use" },
+  { "name": "clear",     "description": "Clear the console" },
+  { "name": "listdir",   "aliases": [ "ls", "dir" ], "description": "List the files in the current directory" },
+  { "name": "changedir", "aliases": [ "cd" ],        "description": "Change the current directory" },
+  { "name": "read",      "aliases": [ "cat" ],       "description": "Display a file" },
+  // Hidden command, declared but not implemented yet (shows the friendly message)
+  { "name": "whispers",  "hidden": true, "description": "..." }
+]

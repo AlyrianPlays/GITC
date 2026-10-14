@@ -24,6 +24,9 @@ namespace GITC.Core
         // -1 = not recalling; otherwise how far back in commandLog
         private int recallIndex { get; set; }
         private string recallDraft { get; set; }
+        public CommandRegistry commandRegistry { get; set; }
+        // Where commands are being run: "mission" or "overworld" (CommandDef.scope)
+        public string scope { get; set; }
 
         // Offsets and sizes are character-cell (8 px) multiples that match the 99x60 cell TIM region.
         // X/Y offsets are relative to the region's top-left corner.
@@ -44,6 +47,8 @@ namespace GITC.Core
             scrollOffset = 0;
             recallIndex = -1;
             recallDraft = "";
+            commandRegistry = new CommandRegistry();
+            scope = "mission";
         }
 
         public override void Update(GameTime gameTime)
@@ -138,19 +143,19 @@ namespace GITC.Core
             ProcessCommand(line);
         }
 
+        // Runs the line through the command registry and prints its output
         private void ProcessCommand(string line)
         {
-            string command = line.Split(' ')[0];
-            string args = string.Join(' ', line.Split(' ')[1..]);
-            if (Enum.GetNames<Commands>().Contains(command))
-            {
-                switch (Enum.Parse(typeof(Commands), command))
-                {
-                    case Commands.echo:
-                        AddHistoryLines(args);
-                        break;
-                }
-            }
+            CommandContext context = new CommandContext() { currGame = currGame, tim = this, registry = commandRegistry, scope = scope };
+            string[] output = commandRegistry.Execute(line, context);
+            if (output.Length > 0)
+                AddHistoryLines(string.Join("\n", output));
+        }
+
+        public void ClearHistory()
+        {
+            history.Clear();
+            scrollOffset = 0;
         }
 
         // direction +1 = older command, -1 = newer (back to the unsent draft)

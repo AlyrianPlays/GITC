@@ -87,6 +87,22 @@ namespace GITC.Core
             tim.Recall(-1); string r4 = tim.inputText.ToString();
             System.Diagnostics.Debug.WriteLine("DevChecks TIM recall: '" + r1 + "', '" + r2 + "', '" + r3 + "', '" + r4 + "' (expect 'echo b', 'echo a', 'echo b', 'draft')");
             tim.inputText.Clear();
+
+            // T-5.3: commands run through the registry
+            tim.ClearHistory();
+            tim.SubmitLine("echo hello world");
+            string echoOut = tim.history[0];
+            tim.SubmitLine("ECHO   spaced   out");
+            string echoOut2 = tim.history[0];
+            tim.SubmitLine("nosuchcommand");
+            string unknownOut = tim.history[0];
+            tim.SubmitLine("whispers");
+            string noHandlerOut = tim.history[0];
+            tim.SubmitLine("help");
+            int helpLines = 0;
+            foreach (string h in tim.history) { if (h.StartsWith("echo ") || h.StartsWith("help ") || h.StartsWith("clear ")) helpLines++; }
+            tim.SubmitLine("clear");
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM commands: echo='" + echoOut + "', echo2='" + echoOut2 + "', unknown='" + unknownOut + "', nohandler='" + noHandlerOut + "', help lists echo/help/clear=" + helpLines + ", after clear history=" + tim.history.Count);
             for (int i = 0; i < 40; i++)
                 tim.AddHistoryLines("line " + i);
             tim.Scroll(1000);
