@@ -1,0 +1,31 @@
+{
+  // The TIM's virtual filesystem. Sample content with placeholder text (3 levels: / -> logs -> archive).
+  // Hidden entries appear once their unlockFlag is a save flag or secret; a file's setsFlag/discoversSecret fire when it is read.
+  "name": "",
+  "files": [
+    { "name": "readme.txt", "text": [ "Welcome, Operator.", "Type help for the commands you can use.", "Try listdir, changedir and read." ] }
+  ],
+  "dirs": [
+    {
+      "name": "logs",
+      "files": [
+        { "name": "session.log", "setsFlag": "found_archive", "text": [ "[placeholder] Session opened.", "Archive index updated." ] }
+      ],
+      "dirs": [
+        {
+          "name": "archive",
+          "files": [
+            { "name": "old_orders.txt", "text": [ "[placeholder] Nothing of interest here." ] },
+            { "name": "note.txt", "hidden": true, "unlockFlag": "found_archive", "discoversSecret": "archive_note", "text": [ "[placeholder] A note that was easy to miss." ] }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ops",
+      "files": [
+        { "name": "briefing.txt", "text": [ "[placeholder] Mission briefings will live here." ] }
+      ]
+    }
+  ]
+}

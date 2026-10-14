@@ -15,6 +15,11 @@
         // Where the TIM is running: "mission" or "overworld" (CommandDef.scope)
         public string scope { get; set; }
 
+        public VirtualFileSystem fileSystem
+        {
+            get { return tim.fileSystem; }
+        }
+
         public SaveManager saveManager
         {
             get { return currGame.currGameState.saveManager; }

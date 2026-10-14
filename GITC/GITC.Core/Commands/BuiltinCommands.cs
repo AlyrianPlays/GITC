@@ -13,6 +13,7 @@ namespace GITC.Core
             registry.handlers[Commands.clear.ToString()] = Clear;
             registry.handlers[Commands.listdir.ToString()] = ListDir;
             registry.handlers[Commands.changedir.ToString()] = ChangeDir;
+            registry.handlers[Commands.read.ToString()] = Read;
         }
 
         // echo <text>: prints the text back
@@ -35,15 +36,32 @@ namespace GITC.Core
             return lines.ToArray();
         }
 
-        //TODO: flat stand-ins until the virtual filesystem exists (T-5.5)
+        // listdir [path]: directories (with a trailing /) then files
         private static string[] ListDir(CommandContext context)
         {
-            return new[] { "(no files)" };
+            List<string> entries = context.fileSystem.List(context.rawArgs);
+            if (entries == null)
+                return new[] { "No such directory: " + context.rawArgs };
+            return entries.Count == 0 ? new[] { "(empty)" } : entries.ToArray();
         }
 
+        // changedir [path]: moves and prints the new path; with no path just prints where you are
         private static string[] ChangeDir(CommandContext context)
         {
-            return new[] { "No such directory: " + context.rawArgs };
+            if (!context.fileSystem.ChangeDir(context.rawArgs))
+                return new[] { "No such directory: " + context.rawArgs };
+            return new[] { context.fileSystem.CurrentPath };
+        }
+
+        // read <file>: prints a text file
+        private static string[] Read(CommandContext context)
+        {
+            if (context.rawArgs.Length == 0)
+                return new[] { "Usage: read <file>" };
+            List<string> text = context.fileSystem.Read(context.rawArgs);
+            if (text == null)
+                return new[] { "File not found: " + context.rawArgs };
+            return text.ToArray();
         }
 
         // clear: empties the console history

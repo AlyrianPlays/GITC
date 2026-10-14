@@ -25,6 +25,17 @@ namespace GITC.Core
         private int recallIndex { get; set; }
         private string recallDraft { get; set; }
         public CommandRegistry commandRegistry { get; set; }
+        private VirtualFileSystem _fileSystem;
+        // Created on first use: the game state (and its SaveManager) does not exist yet while the first mission is being built
+        public VirtualFileSystem fileSystem
+        {
+            get
+            {
+                if (_fileSystem == null)
+                    _fileSystem = new VirtualFileSystem(currGame.currGameState.saveManager);
+                return _fileSystem;
+            }
+        }
         // Where commands are being run: "mission" or "overworld" (CommandDef.scope)
         public string scope { get; set; }
 

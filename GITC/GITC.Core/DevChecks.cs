@@ -105,12 +105,30 @@ namespace GITC.Core
             tim.SubmitLine("help");
             int overworldHelp = tim.history.Count;
             tim.scope = "mission";
-            tim.SubmitLine("listdir");
-            string listOut = tim.history[0];
-            tim.SubmitLine("cd somewhere");
-            string cdOut = tim.history[0];
             tim.SubmitLine("clear");
-            System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.4: listdir='" + listOut + "', cd='" + cdOut + "', help lines in overworld scope=" + overworldHelp);
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.4: help lines in overworld scope=" + overworldHelp);
+
+            // T-5.5: navigate the 3-level sample tree, read a file, unlock a hidden one
+            SaveManager fsSaves = game.currGameState.saveManager;
+            bool hadFlag = fsSaves.HasFlag("found_archive");
+            bool hadSecret = fsSaves.current.discoveredSecrets.Contains("archive_note");
+            fsSaves.current.flags.Remove("found_archive");
+            fsSaves.current.discoveredSecrets.Remove("archive_note");
+            tim.SubmitLine("listdir"); string root1 = string.Join(",", tim.history.GetRange(0, 3)); tim.ClearHistory();
+            tim.SubmitLine("cd logs"); tim.SubmitLine("cd archive"); string path3 = tim.history[0]; tim.ClearHistory();
+            tim.SubmitLine("listdir"); string archiveBefore = string.Join(",", tim.history.GetRange(0, tim.history.Count)); tim.ClearHistory();
+            tim.SubmitLine("read note.txt"); string hiddenRead = tim.history[0]; tim.ClearHistory();
+            tim.SubmitLine("cd /logs"); tim.SubmitLine("read session.log"); tim.ClearHistory();
+            tim.SubmitLine("ls archive"); string after = string.Join(",", tim.history.GetRange(0, tim.history.Count)); tim.ClearHistory();
+            tim.SubmitLine("cat archive/note.txt"); string noteRead = tim.history[0]; tim.ClearHistory();
+            tim.SubmitLine("cd /ops"); tim.SubmitLine("cd .."); string upOne = tim.history[0]; tim.ClearHistory();
+            tim.SubmitLine("cd nowhere"); string badCd = tim.history[0]; tim.ClearHistory();
+            System.Diagnostics.Debug.WriteLine("DevChecks VFS: root (newest first)=" + root1 + " | depth3=" + path3 + " | archive before=" + archiveBefore + " | read hidden='" + hiddenRead + "' | archive after session.log=" + after + " | note='" + noteRead + "' | back=" + upOne + " | bad cd='" + badCd + "'");
+            // Leave the real save as it was
+            fsSaves.current.flags.Remove("found_archive"); fsSaves.current.discoveredSecrets.Remove("archive_note");
+            if (hadFlag) fsSaves.SetFlag("found_archive");
+            if (hadSecret) fsSaves.AddSecret("archive_note");
+            tim.fileSystem.ChangeDir("/");
             System.Diagnostics.Debug.WriteLine("DevChecks TIM commands: echo='" + echoOut + "', echo2='" + echoOut2 + "', unknown='" + unknownOut + "', nohandler='" + noHandlerOut + "', help lists echo/help/clear=" + helpLines + ", after clear history=" + tim.history.Count);
             for (int i = 0; i < 40; i++)
                 tim.AddHistoryLines("line " + i);

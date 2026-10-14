@@ -60,6 +60,13 @@ The C# classes in `GITC.Core/Data/` are the source of truth for field meaning (e
 `name`, `aliases`, `description`, `hidden`, `scope` (`anywhere`/`mission`/`overworld`), `requires` (save flags).
 Behaviour is attached in code by name (T-5.3).
 
+## `filesystem.json` — `VirtualDir` (the TIM's virtual filesystem)
+Root directory has an empty `name`. A directory: `name`, `dirs` (list of directories), `files` (list of files), `hidden`, `unlockFlag`.
+A file: `name`, `text` (list of lines), `hidden`, `unlockFlag`, `setsFlag`, `discoversSecret`.
+- Hidden entries (`hidden: true`) do not show in `listdir` and cannot be read/entered until `unlockFlag` is a save flag or discovered secret.
+- Reading a file sets its `setsFlag` (a save flag) and records its `discoversSecret`, which can unlock other hidden entries.
+- Commands: `listdir [path]` (`ls`, `dir`), `changedir [path]` (`cd`; `..`, `.`, `/` supported), `read <file>` (`cat`). Names are case-insensitive.
+
 ## `scenes/<id>.json` — `SceneDef`
 `id`, `title`, `nextSceneId`, `lines`: list of `{ speaker, text, delayMilliseconds, portraitKey, setFlag }`.
 
