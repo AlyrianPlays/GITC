@@ -11,6 +11,8 @@ namespace GITC.Core
             registry.handlers[Commands.echo.ToString()] = Echo;
             registry.handlers[Commands.help.ToString()] = Help;
             registry.handlers[Commands.clear.ToString()] = Clear;
+            registry.handlers[Commands.listdir.ToString()] = ListDir;
+            registry.handlers[Commands.changedir.ToString()] = ChangeDir;
         }
 
         // echo <text>: prints the text back
@@ -19,18 +21,29 @@ namespace GITC.Core
             return new[] { context.rawArgs };
         }
 
-        // help: every visible command and its description
+        // help: the commands usable here (right scope, requirements met), without the hidden ones
         private static string[] Help(CommandContext context)
         {
             List<string> lines = new List<string>();
             foreach (CommandDef def in context.registry.defs)
             {
-                if (def.hidden)
+                if (def.hidden || !context.registry.IsAvailable(def, context.scope, context.saveManager))
                     continue;
                 lines.Add(def.name.PadRight(12) + def.description);
             }
             lines.Sort(StringComparer.OrdinalIgnoreCase);
             return lines.ToArray();
+        }
+
+        //TODO: flat stand-ins until the virtual filesystem exists (T-5.5)
+        private static string[] ListDir(CommandContext context)
+        {
+            return new[] { "(no files)" };
+        }
+
+        private static string[] ChangeDir(CommandContext context)
+        {
+            return new[] { "No such directory: " + context.rawArgs };
         }
 
         // clear: empties the console history

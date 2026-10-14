@@ -101,7 +101,16 @@ namespace GITC.Core
             tim.SubmitLine("help");
             int helpLines = 0;
             foreach (string h in tim.history) { if (h.StartsWith("echo ") || h.StartsWith("help ") || h.StartsWith("clear ")) helpLines++; }
+            tim.scope = "overworld";
+            tim.SubmitLine("help");
+            int overworldHelp = tim.history.Count;
+            tim.scope = "mission";
+            tim.SubmitLine("listdir");
+            string listOut = tim.history[0];
+            tim.SubmitLine("cd somewhere");
+            string cdOut = tim.history[0];
             tim.SubmitLine("clear");
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.4: listdir='" + listOut + "', cd='" + cdOut + "', help lines in overworld scope=" + overworldHelp);
             System.Diagnostics.Debug.WriteLine("DevChecks TIM commands: echo='" + echoOut + "', echo2='" + echoOut2 + "', unknown='" + unknownOut + "', nohandler='" + noHandlerOut + "', help lists echo/help/clear=" + helpLines + ", after clear history=" + tim.history.Count);
             for (int i = 0; i < 40; i++)
                 tim.AddHistoryLines("line " + i);
