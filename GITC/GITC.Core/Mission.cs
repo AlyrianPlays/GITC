@@ -28,6 +28,7 @@ namespace GITC.Core
 
             moduleManager = new ModuleManager(currGame);
             moduleManager.eventHandler = HandleEvent;
+            moduleManager.AddModule(new PMModule(currGame, this));
         }
 
         // Frozen once the mission has ended; call from the play state only (pause simply stops calling it)
