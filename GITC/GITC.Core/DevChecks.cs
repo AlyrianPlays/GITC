@@ -65,7 +65,32 @@ namespace GITC.Core
             game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs('\r', Microsoft.Xna.Framework.Input.Keys.Enter));
             tim.HandleInput(game.currGameState.input);
             game.currGameState.input.ClearTyped();
-            System.Diagnostics.Debug.WriteLine("DevChecks TIM history [0]='" + tim.consoleHistory[0] + "' [1]='" + tim.consoleHistory[1] + "'");
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM history [0]='" + tim.history[0] + "' [1]='" + tim.history[1] + "'");
+
+            // T-5.2: wrapping, backspace, command recall, scrollback
+            int before = tim.history.Count;
+            tim.SubmitLine("echo " + new string('x', 200));
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM wrap: " + (tim.history.Count - before) + " lines added (expect 6), newest length " + tim.history[0].Length + " (expect 14)");
+            foreach (char c in "abc")
+                game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs(c, Microsoft.Xna.Framework.Input.Keys.None));
+            game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs((char)8, Microsoft.Xna.Framework.Input.Keys.Back));
+            tim.HandleInput(game.currGameState.input);
+            game.currGameState.input.ClearTyped();
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM backspace: '" + tim.inputText + "' (expect 'ab')");
+            tim.inputText.Clear();
+            tim.SubmitLine("echo a");
+            tim.SubmitLine("echo b");
+            tim.inputText.Append("draft");
+            tim.Recall(1); string r1 = tim.inputText.ToString();
+            tim.Recall(1); string r2 = tim.inputText.ToString();
+            tim.Recall(-1); string r3 = tim.inputText.ToString();
+            tim.Recall(-1); string r4 = tim.inputText.ToString();
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM recall: '" + r1 + "', '" + r2 + "', '" + r3 + "', '" + r4 + "' (expect 'echo b', 'echo a', 'echo b', 'draft')");
+            tim.inputText.Clear();
+            for (int i = 0; i < 40; i++)
+                tim.AddHistoryLines("line " + i);
+            tim.Scroll(1000);
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM scroll clamp: " + tim.scrollOffset + " of " + (tim.history.Count - TIMModule.CONSOLEHISTORY_SIZE) + " max");
         }
     }
 }

@@ -14,6 +14,11 @@ namespace GITC.Core
         public List<bool> lastKeyStates { get; set; }
         public MouseState currMouseState { get; set; }
         public MouseState lastMouseState { get; set; }
+        // Raw keyboard, for keys that have no KeyBinds entry (arrows, PageUp/PageDown in the TIM)
+        public KeyboardState currKeyboard { get; set; }
+        public KeyboardState lastKeyboard { get; set; }
+        // Mouse wheel movement this frame (120 per notch)
+        public int scrollDelta { get; set; }
         // Mouse position in 1920x1080 logical coordinates (letterbox-aware)
         public Point mouseLogical { get; set; }
         // Mouse position through the camera (the golden formula, kept for world-space use)
@@ -51,11 +56,14 @@ namespace GITC.Core
             List<bool> newKeyStates = new List<bool>();
             lastKeyStates = currKeyStates;
             KeyboardState ks = Keyboard.GetState();
+            lastKeyboard = currKeyboard;
+            currKeyboard = ks;
 
             //Get mouse positional and click information
             lastMouseState = currMouseState;
             currMouseState = Mouse.GetState();
             mouseLogical = currGame.ScreenToLogical(currMouseState.Position);
+            scrollDelta = currMouseState.ScrollWheelValue - lastMouseState.ScrollWheelValue;
 
             //GOLDEN FORMULA FOR SCALING MOUSE POSITION, NEVER LOSE THIS!!!
             scaledMousePosition = new Vector2(((currMouseState.X) / currGame.currCamera.Zoom) + ((currGame.currCamera.Pos.X) - (currGame.currCamera._viewportWidth / 2) / currGame.currCamera.Zoom),
@@ -120,6 +128,12 @@ namespace GITC.Core
         public bool Released(KeyBinds kb)
         {
             return !Curr(kb) && Last(kb);
+        }
+
+        // Any key went down this frame (curr && !last)
+        public bool KeyPressed(Keys key)
+        {
+            return currKeyboard.IsKeyDown(key) && !lastKeyboard.IsKeyDown(key);
         }
 
         // Left button went down this frame inside the rectangle (logical coordinates)
