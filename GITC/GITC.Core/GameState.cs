@@ -25,8 +25,13 @@ namespace GITC.Core
         public List<Sprite> elementSprites { get; set; }
         public GameStates currentGameState { get; set; }
         public InputManager input { get; set; }
-        //Moves into Mission in T-4.1
-        public ModuleManager moduleManager { get; set; }
+        public Mission currMission { get; set; }
+        // The running mission's modules (null outside a mission)
+        public ModuleManager moduleManager { get { return currMission?.moduleManager; } }
+        public SaveManager saveManager { get; set; }
+        // True once the end of currMission has been recorded in the save
+        private bool missionReported { get; set; }
+        private KeyboardState lastDebugKeys { get; set; }
         // Pass-throughs to InputManager, kept so existing callers keep working
         public MouseState currMouseState { get { return input.currMouseState; } }
         public MouseState lastMouseState { get { return input.lastMouseState; } }
@@ -48,7 +53,9 @@ namespace GITC.Core
         {
             this.currGame = currGame;
             input = new InputManager(currGame);
-            moduleManager = new ModuleManager(currGame);
+            saveManager = new SaveManager();
+            saveManager.Load();
+            StartDebugMission();
             consoleToken = "USER:> ";
             consoleHistory = new String[CONSOLEHISTORY_SIZE];
             userText = new StringBuilder(consoleToken);
@@ -60,6 +67,14 @@ namespace GITC.Core
             currGameTime = 0;
             lastGameTime = 0;
         }
+        //TESTING, REMOVE AFTER: stands in for the overworld starting a mission (T-11.1)
+        private void StartDebugMission()
+        {
+            MissionDef debugDef = new MissionDef() { id = "debug_mission", companyId = "swiftail", name = "Debug mission", durationSeconds = 60, startingOps = 30 };
+            currMission = new Mission(currGame, debugDef);
+            missionReported = false;
+        }
+
         public void Update(GameTime gameTime)
         {
             if (currGameTime != 0)
@@ -73,6 +88,19 @@ namespace GITC.Core
             foreach (KeyBinds kb in Enum.GetValues(typeof(KeyBinds)))
                 if (input.Pressed(kb))
                     System.Diagnostics.Debug.WriteLine("Pressed " + kb);
+
+            //TESTING, REMOVE AFTER: F9 = -10 OP, F10 = +10 OP, F11 = jump to 5 seconds left
+            KeyboardState debugKeys = Keyboard.GetState();
+            if (currMission != null && currentGameState == GameStates.play)
+            {
+                if (debugKeys.IsKeyDown(Keys.F9) && !lastDebugKeys.IsKeyDown(Keys.F9))
+                    currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.pm, 10));
+                if (debugKeys.IsKeyDown(Keys.F10) && !lastDebugKeys.IsKeyDown(Keys.F10))
+                    currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_gain, ModuleTypes.pm, 10));
+                if (debugKeys.IsKeyDown(Keys.F11) && !lastDebugKeys.IsKeyDown(Keys.F11))
+                    currMission.timeRemaining = Math.Min(currMission.timeRemaining, 5f);
+            }
+            lastDebugKeys = debugKeys;
 
             // Esc toggles the pause stub (T-11.6 turns it into a real menu)
             if (input.Pressed(KeyBinds.settings))
@@ -113,7 +141,8 @@ namespace GITC.Core
         internal void OnTextInput(object sender, TextInputEventArgs e)
         {
             // Typing only reaches the console while the TIM is focused (D2); T-5.1 moves the console into TIMModule
-            if (currentGameState != GameStates.play || moduleManager.focusedModule != ModuleTypes.tim)
+            if (currentGameState != GameStates.play || currMission == null || currMission.status != MissionStatus.running
+                || moduleManager.focusedModule != ModuleTypes.tim)
                 return;
 
             // Handle Backspace
@@ -207,13 +236,25 @@ namespace GITC.Core
             // Time since last frame
             double deltaTime = currGameTime - lastGameTime;
 
-            moduleManager.Update(gameTime, input);
+            if (currMission == null)
+                return;
+            currMission.Update(gameTime, input);
+
+            // Record the end of the mission once (autosave)
+            if (currMission.status != MissionStatus.running && !missionReported)
+            {
+                missionReported = true;
+                //Debug missions never touch the real save
+                if (!currMission.def.id.StartsWith("debug"))
+                    saveManager.OnMissionEnded(currMission.def.id, currMission.status == MissionStatus.won, currMission.operatorPoints, currMission.def.unlocks);
+                System.Diagnostics.Debug.WriteLine("Mission " + currMission.def.id + " " + currMission.status + " with " + currMission.operatorPoints + " OP");
+            }
         }
 
         // Draws the modules (call with no SpriteBatch open)
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (currentGameState == GameStates.play || currentGameState == GameStates.pause)
+            if (currMission != null && (currentGameState == GameStates.play || currentGameState == GameStates.pause))
                 moduleManager.Draw(spriteBatch);
         }
 

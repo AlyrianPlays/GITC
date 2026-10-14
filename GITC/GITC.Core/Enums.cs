@@ -164,4 +164,11 @@ namespace GITC.Core
         vital_critical,
         time_expired
     }
+
+    public enum MissionStatus
+    {
+        running,
+        won,
+        lost
+    }
 }

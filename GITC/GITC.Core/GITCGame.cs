@@ -92,7 +92,7 @@ namespace GITC.Core
             currGameState = new GameState(this);
 
             //TESTING, REMOVE AFTER
-            DevChecks.Run();
+            DevChecks.Run(this);
         }
 
         /// <summary>

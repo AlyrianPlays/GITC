@@ -37,6 +37,12 @@ namespace GITC.Core
             SetFocus(ModuleTypes.tim);
         }
 
+        // Used by Mission to add modules that are not part of the default set (e.g. the PM)
+        public void AddModule(GameModule module)
+        {
+            modules.Add(module);
+        }
+
         public GameModule Get(ModuleTypes moduleType)
         {
             return modules.Find(m => m.moduleType == moduleType);

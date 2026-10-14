@@ -6,7 +6,13 @@ namespace GITC.Core
     //TESTING, REMOVE AFTER: startup self-checks for the data layer. Set env var GITC_DEVCHECKS=1 to also echo Debug output to the console.
     internal static class DevChecks
     {
-        public static void Run()
+        private static void SimulateSeconds(GITCGame game, Mission mission, int seconds)
+        {
+            for (int s = 1; s <= seconds; s++)
+                mission.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(s), TimeSpan.FromSeconds(1)), game.currGameState.input);
+        }
+
+        public static void Run(GITCGame currGame)
         {
             if (Environment.GetEnvironmentVariable("GITC_DEVCHECKS") == "1")
                 System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.ConsoleTraceListener());
@@ -31,12 +37,17 @@ namespace GITC.Core
                     if (!Enum.TryParse<Companies>(c.id, out _))
                         System.Diagnostics.Debug.WriteLine("DevChecks company id not in Companies enum: " + c.id);
 
-            // T-2.4: a flag saved on one run is still there on the next (delete Content/Saves/save.json to reset)
-            SaveManager saves = new SaveManager();
-            saves.Load();
-            System.Diagnostics.Debug.WriteLine("DevChecks save file " + saves.savePath + ": test_mission already unlocked = " + saves.IsMissionUnlocked("test_mission"));
-            saves.UnlockMission("test_mission");
-            saves.Save();
+            // T-4.1: a mission is won at the end of its timer and lost at zero OPs (simulated, 1 second per frame)
+            GITCGame game = currGame;
+            Mission win = new Mission(game, new MissionDef() { id = "debug_win", durationSeconds = 5, startingOps = 30 });
+            win.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.pm, 10));
+            SimulateSeconds(game, win, 10);
+            System.Diagnostics.Debug.WriteLine("DevChecks mission win: " + win.status + ", OP=" + win.operatorPoints + ", time=" + win.timeRemaining);
+            Mission lose = new Mission(game, new MissionDef() { id = "debug_lose", durationSeconds = 60, startingOps = 30 });
+            for (int i = 0; i < 3; i++)
+                lose.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.pm, 10));
+            SimulateSeconds(game, lose, 1);
+            System.Diagnostics.Debug.WriteLine("DevChecks mission lose: " + lose.status + ", OP=" + lose.operatorPoints + ", time=" + lose.timeRemaining);
         }
     }
 }
