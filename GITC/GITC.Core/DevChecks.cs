@@ -137,6 +137,28 @@ namespace GITC.Core
                 liveTim.Scroll(5);
             }
 
+            // T-6.1: vitals go critical once, kill the agent after deathSeconds, and recover
+            VitalsConfig vcfg = new VitalsConfig();
+            vcfg.heartRate.deathSeconds = 5f;
+            vcfg.temperature.driftPerSecond = -0.5f;
+            VitalsModel vm = new VitalsModel(vcfg);
+            int criticals = 0, deaths = 0; string critWhat = "", deathWhat = "";
+            vm.onCritical = (v, high) => { criticals++; critWhat += v.name + (high ? "+" : "-") + " "; };
+            vm.onDeath = v => { deaths++; deathWhat = v.name; };
+            vm.Update(1f);
+            string tempAt1 = vm.Get(Vitals.temperature).value.ToString("0.0");
+            vm.Nudge(Vitals.heart_rate, 60f);          // 130 bpm: critical
+            VitalStates hrState = vm.Get(Vitals.heart_rate).state;
+            for (int i = 0; i < 3; i++) vm.Update(1f); // 3 s out of range, not dead yet
+            bool aliveAt3 = !vm.isDead;
+            vm.Nudge(Vitals.heart_rate, -60f);         // recovered
+            vm.Update(1f);
+            float outAfter = vm.Get(Vitals.heart_rate).outOfRangeSeconds;
+            vm.Nudge(Vitals.heart_rate, 200f);         // clamped to the hard max (220)
+            float clamped = vm.Get(Vitals.heart_rate).value;
+            for (int i = 0; i < 10; i++) vm.Update(1f);
+            System.Diagnostics.Debug.WriteLine("DevChecks vitals: temp after 1s=" + tempAt1 + ", HR state=" + hrState + ", alive at 3s=" + aliveAt3 + ", outOfRange after recovery=" + outAfter + ", clamped HR=" + clamped + ", criticals=" + criticals + " (" + critWhat.Trim() + "), deaths=" + deaths + " (" + deathWhat + "), dead=" + vm.isDead);
+
             // T-5.6: timed command challenges (simulated, 1 second per frame)
             Mission chal = new Mission(game, new MissionDef() { id = "debug_challenge", durationSeconds = 60, startingOps = 30 });
             TIMModule chalTim = (TIMModule)chal.moduleManager.Get(ModuleTypes.tim);

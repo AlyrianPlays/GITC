@@ -166,6 +166,7 @@ namespace GITC.Core
         maze_failed,
         maze_completed,
         vital_critical,
+        vital_nudge,
         time_expired
     }
 
@@ -174,5 +175,20 @@ namespace GITC.Core
         running,
         won,
         lost
+    }
+
+    // The field agent's vital signs (VitalsModel keeps them in a list indexed by this enum)
+    public enum Vitals
+    {
+        heart_rate,
+        sanity,
+        temperature
+    }
+
+    public enum VitalStates
+    {
+        normal,
+        warning,
+        critical
     }
 }
