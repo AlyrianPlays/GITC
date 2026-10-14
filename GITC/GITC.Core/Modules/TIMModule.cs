@@ -32,6 +32,8 @@ namespace GITC.Core
         public Action<char> onKeyTyped { get; set; }
         // Cursor blinks twice a second and restarts solid whenever the player types
         private double totalSeconds { get; set; }
+        // Game clock as the TIM last saw it (command cooldowns use it)
+        public double elapsedSeconds { get { return totalSeconds; } }
         private double lastTypedSeconds { get; set; }
         // Older lines exist above what is shown / the view is scrolled back from the newest line
         public bool hasMoreAbove { get { return history.Count > scrollOffset + CONSOLEHISTORY_SIZE; } }

@@ -57,7 +57,7 @@ The C# classes in `GITC.Core/Data/` are the source of truth for field meaning (e
 `id`, `tileSize` (16), `tiles` (list of row strings, `.` empty / `#` solid), `spawnX`, `spawnY`, `goalX`. Enemies and barriers come in T-8.2/T-8.3.
 
 ## `commands.json` — `List<CommandDef>`
-`name`, `aliases`, `description`, `hidden`, `scope` (`anywhere`/`mission`/`overworld`), `requires` (save flags).
+`name`, `aliases`, `description`, `hidden`, `scope` (`anywhere`/`mission`/`overworld`), `cooldownSeconds` (0 = none), `requires` (save flags).
 Behaviour is attached in code by name (T-5.3).
 
 ## `filesystem.json` — `VirtualDir` (the TIM's virtual filesystem)

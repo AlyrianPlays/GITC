@@ -34,7 +34,14 @@ namespace GITC.Core
         public VMModule(GITCGame currGame, VitalsConfig config) : base(currGame, ModuleTypes.vm, HudLayout.VM)
         {
             model = new VitalsModel(config);
-            model.onCritical = (vital, tooHigh) => Raise(new ModuleEvent(ModuleEventTypes.vital_critical, ModuleTypes.vm, tooHigh ? 1 : -1, vital.name));
+            model.onCritical = (vital, tooHigh) =>
+            {
+                Raise(new ModuleEvent(ModuleEventTypes.vital_critical, ModuleTypes.vm, tooHigh ? 1 : -1, vital.name));
+                // Tell the player which command fixes it, with a little less time than the agent has left
+                string fix = VitalCommands.CorrectiveFor(vital.type, tooHigh);
+                if (fix.Length > 0)
+                    Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.vm, Math.Max(3, (int)(vital.deathThreshold * 0.6f)), fix));
+            };
             model.onDeath = vital => Raise(new ModuleEvent(ModuleEventTypes.agent_died, ModuleTypes.vm, 0, vital.name));
 
             ecg = new List<float>();

@@ -12,6 +12,8 @@ namespace GITC.Core
         public bool hidden { get; set; }
         // Where it works: anywhere, mission, overworld
         public string scope { get; set; }
+        // Seconds before the command can be used again (0 = no cooldown)
+        public float cooldownSeconds { get; set; }
         // Save flags/secrets that must be set before the command is available
         public List<string> requires { get; set; }
 

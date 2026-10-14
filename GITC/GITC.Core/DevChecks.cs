@@ -171,6 +171,26 @@ namespace GITC.Core
             SimulateSeconds(game, vmMission, 12);
             System.Diagnostics.Debug.WriteLine("DevChecks VM module: HR after +60 nudge=" + hrAfterNudge + ", events seen: " + vmSeen.Trim() + ", dead=" + vmModule.model.isDead + ", ECG wave peak=" + VMModule.EcgWave(0.235f).ToString("0.00") + " baseline=" + VMModule.EcgWave(0.7f).ToString("0.00"));
 
+            // T-6.3: a critical vital raises the right command challenge; the command fixes it and then has a cooldown
+            Mission fix = new Mission(game, new MissionDef() { id = "debug_fix", durationSeconds = 120, startingOps = 30 });
+            TIMModule fixTim = (TIMModule)fix.moduleManager.Get(ModuleTypes.tim);
+            VMModule fixVm = (VMModule)fix.moduleManager.Get(ModuleTypes.vm);
+            fix.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, 600, "heart_rate"));
+            SimulateSeconds(game, fix, 2);
+            string asked = fixTim.challenges.Count > 0 ? fixTim.challenges[0].command + " in " + fixTim.challenges[0].timeLimit + "s" : "<none>";
+            fixTim.SubmitLine("calm");
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            float hrFixed = fixVm.model.Get(Vitals.heart_rate).value;
+            float sanityAfter = fixVm.model.Get(Vitals.sanity).value;
+            fixTim.ClearHistory();
+            fixTim.SubmitLine("calm");
+            string coolOut = fixTim.history[0];
+            fixTim.ClearHistory();
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            fixTim.SubmitLine("warm");
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(13), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            System.Diagnostics.Debug.WriteLine("DevChecks vital commands: challenge='" + asked + "' (expect calm in 6s), HR after calm=" + hrFixed + " (expect 100), sanity=" + sanityAfter + " (expect 100, capped), second calm='" + coolOut + "', challenges left=" + fixTim.challenges.Count + ", OP=" + fix.operatorPoints + ", temp after warm=" + fixVm.model.Get(Vitals.temperature).value.ToString("0.0") + " (expect 38.5)");
+
             // Visual aid: GITC_DEVVITALS=1 pushes the running debug mission's vitals into warning/critical so the monitor can be seen
             if (Environment.GetEnvironmentVariable("GITC_DEVVITALS") == "1")
             {
