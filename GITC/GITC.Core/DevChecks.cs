@@ -182,6 +182,7 @@ namespace GITC.Core
             fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1)), game.currGameState.input);
             float hrFixed = fixVm.model.Get(Vitals.heart_rate).value;
             float sanityAfter = fixVm.model.Get(Vitals.sanity).value;
+            string defaultStates = fixVm.model.Get(Vitals.heart_rate).state + "/" + fixVm.model.Get(Vitals.sanity).state + "/" + fixVm.model.Get(Vitals.temperature).state;
             fixTim.ClearHistory();
             fixTim.SubmitLine("calm");
             string coolOut = fixTim.history[0];
@@ -189,7 +190,17 @@ namespace GITC.Core
             fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(1)), game.currGameState.input);
             fixTim.SubmitLine("warm");
             fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(13), TimeSpan.FromSeconds(1)), game.currGameState.input);
-            System.Diagnostics.Debug.WriteLine("DevChecks vital commands: challenge='" + asked + "' (expect calm in 6s), HR after calm=" + hrFixed + " (expect 100), sanity=" + sanityAfter + " (expect 100, capped), second calm='" + coolOut + "', challenges left=" + fixTim.challenges.Count + ", OP=" + fix.operatorPoints + ", temp after warm=" + fixVm.model.Get(Vitals.temperature).value.ToString("0.0") + " (expect 38.5)");
+            // Sanity is fixed by its own command and never warns at its maximum
+            fix.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, -700, "sanity"));
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(14), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(14), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            string sanityAsk = fixTim.challenges.Exists(c => c.command == "reassure") ? "reassure" : "<none>";
+            float sanityLow = fixVm.model.Get(Vitals.sanity).value;
+            float hrBefore = fixVm.model.Get(Vitals.heart_rate).value;
+            fixTim.SubmitLine("reassure");
+            fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(1)), game.currGameState.input);
+            System.Diagnostics.Debug.WriteLine("DevChecks sanity: default states HR/sanity/temp=" + defaultStates + " (expect normal/normal/normal), low sanity=" + sanityLow + " asks '" + sanityAsk + "', after reassure=" + fixVm.model.Get(Vitals.sanity).value + " (expect 50), HR untouched=" + (fixVm.model.Get(Vitals.heart_rate).value == hrBefore));
+            System.Diagnostics.Debug.WriteLine("DevChecks vital commands: challenge='" + asked + "' (expect calm in 6s), HR after calm=" + hrFixed + " (expect 100), sanity after calm=" + sanityAfter + " (expect 100, calm leaves it alone), second calm='" + coolOut + "', challenges left=" + fixTim.challenges.Count + ", OP=" + fix.operatorPoints + ", temp after warm=" + fixVm.model.Get(Vitals.temperature).value.ToString("0.0") + " (expect 38.5)");
 
             // Visual aid: GITC_DEVVITALS=1 pushes the running debug mission's vitals into warning/critical so the monitor can be seen
             if (Environment.GetEnvironmentVariable("GITC_DEVVITALS") == "1")

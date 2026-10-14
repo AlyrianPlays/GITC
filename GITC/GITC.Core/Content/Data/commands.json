@@ -7,8 +7,9 @@
   { "name": "listdir",   "aliases": [ "ls", "dir" ], "description": "List the files in the current directory" },
   { "name": "changedir", "aliases": [ "cd" ],        "description": "Change the current directory" },
   { "name": "read",      "aliases": [ "cat" ],       "description": "Display a file" },
-  // Vital Monitor commands (mission only); each has a cooldown in seconds
-  { "name": "calm",      "scope": "mission", "cooldownSeconds": 8, "description": "Lower the agent's heart rate and steady their mind" },
+  // Vital Monitor commands (mission only): one vital, one direction each; each has a cooldown in seconds
+  { "name": "calm",      "scope": "mission", "cooldownSeconds": 8, "description": "Lower the agent's heart rate" },
+  { "name": "reassure",  "scope": "mission", "cooldownSeconds": 8, "description": "Raise the agent's sanity" },
   { "name": "stimulate", "scope": "mission", "cooldownSeconds": 8, "description": "Raise the agent's heart rate" },
   { "name": "warm",      "scope": "mission", "cooldownSeconds": 6, "description": "Raise the agent's body temperature" },
   { "name": "cool",      "scope": "mission", "cooldownSeconds": 6, "description": "Lower the agent's body temperature" },

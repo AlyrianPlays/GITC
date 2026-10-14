@@ -2,14 +2,18 @@
 
 namespace GITC.Core
 {
-    // TIM commands that act on the field agent's vitals (calm, stimulate, warm, cool). Each is a vital_nudge event
-    // sent to the Vital Monitor; cooldowns come from commands.json (CommandDef.cooldownSeconds).
+    // TIM commands that act on the field agent's vitals. Each changes exactly one vital in one direction, so fixing
+    // one never pushes another out of range: calm / stimulate (heart rate down / up), reassure (sanity up),
+    // warm / cool (temperature up / down). Each is a vital_nudge event sent to the Vital Monitor;
+    // cooldowns come from commands.json (CommandDef.cooldownSeconds).
     internal static class VitalCommands
     {
         public static void Register(CommandRegistry registry)
         {
             registry.handlers["calm"] = context => Apply(context, "Calming signal sent.",
-                (Vitals.heart_rate, -300), (Vitals.sanity, 150));
+                (Vitals.heart_rate, -300));
+            registry.handlers["reassure"] = context => Apply(context, "Reassuring the agent.",
+                (Vitals.sanity, 200));
             registry.handlers["stimulate"] = context => Apply(context, "Stimulant sent.",
                 (Vitals.heart_rate, 300));
             registry.handlers["warm"] = context => Apply(context, "Heating the suit.",
@@ -27,7 +31,7 @@ namespace GITC.Core
                 case Vitals.heart_rate:
                     return tooHigh ? "calm" : "stimulate";
                 case Vitals.sanity:
-                    return tooHigh ? "" : "calm";
+                    return tooHigh ? "" : "reassure";
                 default:
                     return tooHigh ? "cool" : "warm";
             }

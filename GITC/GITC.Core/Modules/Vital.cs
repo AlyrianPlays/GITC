@@ -51,14 +51,19 @@ namespace GITC.Core
             get { return value < range.safeMin || value > range.safeMax; }
         }
 
+        // normal / warning (near a safe edge) / critical (out of range)
         public VitalStates state
         {
             get
             {
                 if (isOutOfRange)
                     return VitalStates.critical;
+                // Warn when close to a safe edge, but only an edge the value can really cross: sanity at its
+                // maximum is as good as it gets, so its top edge (safeMax == hardMax) never warns
                 float margin = (range.safeMax - range.safeMin) * WARNINGMARGIN;
-                if (value < range.safeMin + margin || value > range.safeMax - margin)
+                bool canGoLow = range.safeMin > hardMin;
+                bool canGoHigh = range.safeMax < hardMax;
+                if ((canGoLow && value < range.safeMin + margin) || (canGoHigh && value > range.safeMax - margin))
                     return VitalStates.warning;
                 return VitalStates.normal;
             }
