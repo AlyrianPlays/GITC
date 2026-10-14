@@ -37,6 +37,14 @@ namespace GITC.Core
                     if (!Enum.TryParse<Companies>(c.id, out _))
                         System.Diagnostics.Debug.WriteLine("DevChecks company id not in Companies enum: " + c.id);
 
+            // T-4.4: the NES palette loads and every company colour is an entry of it
+            System.Diagnostics.Debug.WriteLine("DevChecks palette entries = " + Palette.nes.Count);
+            if (companies != null)
+            {
+                System.Diagnostics.Debug.WriteLine("DevChecks company colours = " + string.Join(", ", companies.ConvertAll(c => c.id + " " + c.color + (Palette.Contains(Palette.ParseHex(c.color)) ? " ok" : " OFF-PALETTE"))));
+                System.Diagnostics.Debug.WriteLine("DevChecks off-palette companies = " + Palette.ValidateCompanies(companies));
+            }
+
             // T-4.1: a mission is won at the end of its timer and lost at zero OPs (simulated, 1 second per frame)
             GITCGame game = currGame;
             Mission win = new Mission(game, new MissionDef() { id = "debug_win", durationSeconds = 5, startingOps = 30 });

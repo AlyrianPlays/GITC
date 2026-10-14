@@ -21,7 +21,8 @@ The C# classes in `GITC.Core/Data/` are the source of truth for field meaning (e
 | `name` | string | Display name |
 | `isPrior` | bool | Previous iteration of a company |
 | `ceo`, `godName` | string | `godName` is hidden from the player until lore reveals it |
-| `color` | string | `"#RRGGBB"` |
+| `color` | string | `"#RRGGBB"`; must be an entry of the NES palette (`docs/THEMING.md`), off-palette colours are logged |
+| `logoOpacity` | float | Opacity of the logo behind the TIM, default 0.2 |
 | `logoKey` | string | ContentRegistry texture key |
 | `musicKey` | string | ContentRegistry song key (optional) |
 | `missionFile` | string | Path under `Data/`, e.g. `companies/swiftail.json` |

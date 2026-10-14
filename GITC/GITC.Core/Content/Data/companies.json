@@ -1,13 +1,13 @@
 [
   // Companies from GameDescription.txt. isPrior = previous iteration of the named company.
-  // moduleWeights are placeholders to be tuned (only Swiftail leans on a module so far, per D7).
-  { "id": "swiftail",        "name": "Swiftail",  "isPrior": false, "ceo": "Kit",  "godName": "Kitserix",  "color": "#FF8C1A", "logoKey": "logo_fox",     "missionFile": "companies/swiftail.json", "moduleWeights": { "fav": 1.5 } },
-  { "id": "priden",          "name": "Priden",    "isPrior": false, "ceo": "Tali", "godName": "Talikaad",  "color": "#FFD21F", "logoKey": "logo_lion" },
-  { "id": "slithiss",        "name": "Slithiss",  "isPrior": false, "ceo": "Syl",  "godName": "Syllenia",  "color": "#3DBE4A", "logoKey": "logo_serpent" },
-  { "id": "wisdus",          "name": "Wisdus",    "isPrior": false, "ceo": "Len",  "godName": "Hollendov", "color": "#1F2E8C", "logoKey": "logo_tome_scarf" },
-  { "id": "wisdus_prior",    "name": "Wisdus",    "isPrior": true,  "ceo": "Sada", "godName": "Sadaline",  "color": "#7FC8F0", "logoKey": "logo_otter" },
-  { "id": "highmount_prior", "name": "Highmount", "isPrior": true,  "ceo": "Vin",  "godName": "Praejovin", "color": "#D62828", "logoKey": "logo_dragon" },
-  { "id": "deepward",        "name": "Deepward",  "isPrior": false, "ceo": "Russ", "godName": "Ognatorus", "color": "#7B3FA0", "logoKey": "logo_kraken" },
+  // Colours are NES palette entries (see docs/THEMING.md). moduleWeights are placeholders to be tuned (only Swiftail leans on a module so far, per D7).
+  { "id": "swiftail",        "name": "Swiftail",  "isPrior": false, "ceo": "Kit",  "godName": "Kitserix",  "color": "#FF7930", "logoKey": "logo_fox",     "missionFile": "companies/swiftail.json", "moduleWeights": { "fav": 1.5 } },
+  { "id": "priden",          "name": "Priden",    "isPrior": false, "ceo": "Tali", "godName": "Talikaad",  "color": "#EBD320", "logoKey": "logo_lion" },
+  { "id": "slithiss",        "name": "Slithiss",  "isPrior": false, "ceo": "Syl",  "godName": "Syllenia",  "color": "#49AA10", "logoKey": "logo_serpent" },
+  { "id": "wisdus",          "name": "Wisdus",    "isPrior": false, "ceo": "Len",  "godName": "Hollendov", "color": "#2800BA", "logoKey": "logo_tome_scarf" },
+  { "id": "wisdus_prior",    "name": "Wisdus",    "isPrior": true,  "ceo": "Sada", "godName": "Sadaline",  "color": "#61D3E3", "logoKey": "logo_otter" },
+  { "id": "highmount_prior", "name": "Highmount", "isPrior": true,  "ceo": "Vin",  "godName": "Praejovin", "color": "#B21030", "logoKey": "logo_dragon" },
+  { "id": "deepward",        "name": "Deepward",  "isPrior": false, "ceo": "Russ", "godName": "Ognatorus", "color": "#6110A2", "logoKey": "logo_kraken" },
   // The player is Whiteout's CEO (Lycrin) but does not know it
   { "id": "whiteout",        "name": "Whiteout",  "isPrior": false, "ceo": "{player}", "godName": "Lycrin", "color": "#FFFFFF", "logoKey": "logo_wolf" }
 ]

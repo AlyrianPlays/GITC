@@ -14,10 +14,12 @@ namespace GITC.Core
         public string ceo { get; set; }
         // The CEO's real name as an elder god (hidden from the player until lore reveals it)
         public string godName { get; set; }
-        // Brand colour as "#RRGGBB"
+        // Brand colour as "#RRGGBB"; must be an entry of the NES palette (see Palette, docs/THEMING.md)
         public string color { get; set; }
         // ContentRegistry texture key for the logo
         public string logoKey { get; set; }
+        // Opacity of the logo drawn behind the TIM, 0-1 (see docs/THEMING.md)
+        public float logoOpacity { get; set; }
         // Optional ContentRegistry song key for this company's missions
         public string musicKey { get; set; }
         // Mission file relative to Content/Data/ (a CompanyMissions json), empty if the company has no missions yet
@@ -28,6 +30,7 @@ namespace GITC.Core
         public Company()
         {
             moduleWeights = new Dictionary<string, float>();
+            logoOpacity = 0.2f;
         }
     }
 }

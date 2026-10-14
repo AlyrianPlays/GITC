@@ -5,7 +5,7 @@ the **module borders** and a faint **logo behind the TIM**. Decisions D8-D10 in 
 
 ## Palette
 
-All company colours are entries of the NES palette (Aseprite's `hardware-palettes/nes.gpl`, 56 lines; copied into
+All company colours are entries of the NES palette (Aseprite's `hardware-palettes/nes.gpl`, 56 lines = 54 unique colours; copied into
 the repo at `GITC.Core/Content/Data/palettes/nes.gpl` by T-4.4). The game never reads it from Program Files.
 Colours in `companies.json` are `"#RRGGBB"` strings and must be palette entries; a colour outside the palette is logged.
 
