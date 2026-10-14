@@ -108,6 +108,21 @@ namespace GITC.Core
             tim.SubmitLine("clear");
             System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.4: help lines in overworld scope=" + overworldHelp);
 
+            // T-5.6: timed command challenges (simulated, 1 second per frame)
+            Mission chal = new Mission(game, new MissionDef() { id = "debug_challenge", durationSeconds = 60, startingOps = 30 });
+            TIMModule chalTim = (TIMModule)chal.moduleManager.Get(ModuleTypes.tim);
+            chal.moduleManager.SetFocus(ModuleTypes.fav);
+            chal.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, 8, "unlock barrier"));
+            SimulateSeconds(game, chal, 1);
+            string focusAfter = chal.moduleManager.focusedModule.ToString();
+            int pending = chalTim.challenges.Count;
+            chalTim.SubmitLine("  UNLOCK   Barrier ");
+            SimulateSeconds(game, chal, 1);
+            System.Diagnostics.Debug.WriteLine("DevChecks challenge answered: focus=" + focusAfter + ", pending before=" + pending + ", after=" + chalTim.challenges.Count + ", OP=" + chal.operatorPoints + " (expect tim, 1, 0, 30), history[0]='" + chalTim.history[0] + "'");
+            chal.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, 3, "calm"));
+            SimulateSeconds(game, chal, 5);
+            System.Diagnostics.Debug.WriteLine("DevChecks challenge timed out: pending=" + chalTim.challenges.Count + ", OP=" + chal.operatorPoints + " (expect 0, 20), history[0]='" + chalTim.history[0] + "'");
+
             // T-5.5: navigate the 3-level sample tree, read a file, unlock a hidden one
             SaveManager fsSaves = game.currGameState.saveManager;
             bool hadFlag = fsSaves.HasFlag("found_archive");

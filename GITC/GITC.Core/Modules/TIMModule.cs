@@ -25,6 +25,8 @@ namespace GITC.Core
         private int recallIndex { get; set; }
         private string recallDraft { get; set; }
         public CommandRegistry commandRegistry { get; set; }
+        // Commands the player has been told to type, with their countdowns
+        public List<CommandChallenge> challenges { get; set; }
         private VirtualFileSystem _fileSystem;
         // Created on first use: the game state (and its SaveManager) does not exist yet while the first mission is being built
         public VirtualFileSystem fileSystem
@@ -59,11 +61,34 @@ namespace GITC.Core
             recallIndex = -1;
             recallDraft = "";
             commandRegistry = new CommandRegistry();
+            challenges = new List<CommandChallenge>();
             scope = "mission";
         }
 
         public override void Update(GameTime gameTime)
         {
+            // Count down each challenge; one that runs out raises command_failed (Mission turns it into an OP penalty)
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            foreach (CommandChallenge challenge in challenges.ToArray())
+            {
+                challenge.remaining -= elapsed;
+                if (challenge.remaining <= 0f)
+                {
+                    challenges.Remove(challenge);
+                    AddHistoryLines("TIME OUT: " + challenge.command);
+                    Raise(new ModuleEvent(ModuleEventTypes.command_failed, ModuleTypes.tim, 0, challenge.command));
+                }
+            }
+        }
+
+        // command_required: amount = seconds allowed, tag = the command to type. Takes focus so the player can answer (D2).
+        public override void OnEvent(ModuleEvent moduleEvent)
+        {
+            if (moduleEvent.type == ModuleEventTypes.command_required)
+            {
+                challenges.Add(new CommandChallenge(moduleEvent.tag, moduleEvent.amount));
+                manager?.SetFocus(ModuleTypes.tim);
+            }
         }
 
         // Typed characters arrive through InputManager.typedChars (only while this module is focused)
@@ -151,6 +176,19 @@ namespace GITC.Core
                 commandLog.Add(line);
             recallIndex = -1;
             scrollOffset = 0;
+
+            // Answering a challenge clears it; if the text is also a real command it still runs
+            CommandChallenge answered = challenges.Find(c => c.Matches(line));
+            if (answered != null)
+            {
+                challenges.Remove(answered);
+                Raise(new ModuleEvent(ModuleEventTypes.command_satisfied, ModuleTypes.tim, 0, answered.command));
+                if (commandRegistry.Find(line.Trim().Split(' ')[0]) == null)
+                {
+                    AddHistoryLines("ACCEPTED: " + answered.command);
+                    return;
+                }
+            }
             ProcessCommand(line);
         }
 
@@ -225,6 +263,17 @@ namespace GITC.Core
                 int index = scrollOffset + i;
                 if (index < history.Count)
                     spriteBatch.DrawString(font, history[index], new Vector2(originX, originY - (textHeight * (i + 1))), Color.White);
+            }
+
+            // Pending command challenges: a strip across the top, flashing in the last 3 seconds
+            for (int i = 0; i < challenges.Count; i++)
+            {
+                CommandChallenge challenge = challenges[i];
+                Rectangle strip = new Rectangle(region.X, region.Y + 4 + i * textHeight, region.Width, textHeight);
+                bool urgent = challenge.remaining < 3f && (int)(challenge.remaining * 4f) % 2 == 0;
+                spriteBatch.Draw(currGame._content.pixel, strip, Color.Black * 0.85f);
+                spriteBatch.DrawString(font, "REQUIRED: " + challenge.command + " - " + (int)Math.Ceiling(challenge.remaining) + "s",
+                                       new Vector2(originX, strip.Y), urgent ? Color.Red : Color.Yellow);
             }
 
             // Cursor

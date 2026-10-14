@@ -16,6 +16,8 @@ namespace GITC.Core
         // Seconds left on the clock (counts down while the mission is running)
         public float timeRemaining { get; set; }
         public int operatorPoints { get; set; }
+        // OP cost of a missed command challenge unless the mission's penalties say otherwise
+        public const int DEFAULTCOMMANDPENALTY = 10;
         // OPs cannot be gained above the starting amount
         public int maxOperatorPoints { get; set; }
 
@@ -59,6 +61,11 @@ namespace GITC.Core
             {
                 case ModuleEventTypes.op_penalty:
                     operatorPoints = Math.Max(0, operatorPoints - moduleEvent.amount);
+                    break;
+                case ModuleEventTypes.command_failed:
+                    // A command challenge ran out of time (raised by the TIM)
+                    int penalty = def.penalties.TryGetValue("command_failed", out int custom) ? custom : DEFAULTCOMMANDPENALTY;
+                    operatorPoints = Math.Max(0, operatorPoints - penalty);
                     break;
                 case ModuleEventTypes.op_gain:
                     operatorPoints = Math.Min(maxOperatorPoints, operatorPoints + moduleEvent.amount);

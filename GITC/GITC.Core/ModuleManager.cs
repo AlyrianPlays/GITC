@@ -34,12 +34,16 @@ namespace GITC.Core
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.lvm, HudLayout.LVM, Color.Lime));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.vm, HudLayout.VM, Color.Magenta));
 
+            foreach (GameModule m in modules)
+                m.manager = this;
+
             SetFocus(ModuleTypes.tim);
         }
 
         // Used by Mission to add modules that are not part of the default set (e.g. the PM)
         public void AddModule(GameModule module)
         {
+            module.manager = this;
             modules.Add(module);
         }
 

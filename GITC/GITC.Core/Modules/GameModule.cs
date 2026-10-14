@@ -9,6 +9,8 @@ namespace GITC.Core
     internal abstract class GameModule
     {
         public GITCGame currGame { get; set; }
+        // Set by ModuleManager when the module is added; used to raise events
+        public ModuleManager manager { get; set; }
         public ModuleTypes moduleType { get; set; }
         // Screen rectangle in 1920x1080 logical coordinates (from HudLayout)
         public Rectangle region { get; set; }
@@ -34,6 +36,12 @@ namespace GITC.Core
 
         // Runs only while focused
         public abstract void HandleInput(InputManager input);
+
+        // Queues an event for all modules (delivered during the manager's next Update)
+        protected void Raise(ModuleEvent moduleEvent)
+        {
+            manager?.Raise(moduleEvent);
+        }
 
         // Called for every event raised on the ModuleManager, whichever module raised it (including this one)
         public virtual void OnEvent(ModuleEvent moduleEvent)

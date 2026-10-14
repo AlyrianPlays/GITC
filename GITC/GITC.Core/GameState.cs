@@ -83,6 +83,9 @@ namespace GITC.Core
             currMission = new Mission(currGame, debugDef);
             missionReported = false;
             currentTheme = currMission.theme;
+            //TESTING: env var GITC_DEBUGCHALLENGE=1 raises a 30 s command challenge at the start so the banner can be seen without keys
+            if (Environment.GetEnvironmentVariable("GITC_DEBUGCHALLENGE") == "1")
+                currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, 30, "unlock barrier"));
         }
 
         private void ReturnToOverworld()
@@ -106,7 +109,7 @@ namespace GITC.Core
                 if (input.Pressed(kb))
                     System.Diagnostics.Debug.WriteLine("Pressed " + kb);
 
-            //TESTING, REMOVE AFTER: F9 = -10 OP, F10 = +10 OP, F11 = jump to 5 seconds left
+            //TESTING, REMOVE AFTER: F8 = command challenge 'unlock barrier' (8 s), F9 = -10 OP, F10 = +10 OP, F11 = jump to 5 seconds left
             KeyboardState debugKeys = Keyboard.GetState();
             if (currMission != null && currentGameState == GameStates.play)
             {
@@ -114,6 +117,8 @@ namespace GITC.Core
                     currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.pm, 10));
                 if (debugKeys.IsKeyDown(Keys.F10) && !lastDebugKeys.IsKeyDown(Keys.F10))
                     currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.op_gain, ModuleTypes.pm, 10));
+                if (debugKeys.IsKeyDown(Keys.F8) && !lastDebugKeys.IsKeyDown(Keys.F8))
+                    currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, 8, "unlock barrier"));
                 if (debugKeys.IsKeyDown(Keys.F11) && !lastDebugKeys.IsKeyDown(Keys.F11))
                     currMission.timeRemaining = Math.Min(currMission.timeRemaining, 5f);
             }
