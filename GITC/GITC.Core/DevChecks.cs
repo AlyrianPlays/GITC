@@ -108,6 +108,35 @@ namespace GITC.Core
             tim.SubmitLine("clear");
             System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.4: help lines in overworld scope=" + overworldHelp);
 
+            // T-5.7: typing hook and scroll indicator state
+            string hookKeys = "";
+            tim.onKeyTyped = k => hookKeys += k == (char)8 ? "<B>" : (k == (char)10 ? "<E>" : k.ToString());
+            foreach (char c in "hi")
+                game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs(c, Microsoft.Xna.Framework.Input.Keys.None));
+            game.currGameState.input.typedChars.Enqueue(new Microsoft.Xna.Framework.TextInputEventArgs((char)8, Microsoft.Xna.Framework.Input.Keys.Back));
+            tim.HandleInput(game.currGameState.input);
+            game.currGameState.input.ClearTyped();
+            tim.onKeyTyped = null;
+            tim.inputText.Clear();
+            tim.ClearHistory();
+            bool noIndicators = !tim.hasMoreAbove && !tim.isScrolledBack;
+            for (int i = 0; i < 40; i++)
+                tim.AddHistoryLines("line " + i);
+            bool moreAbove = tim.hasMoreAbove;
+            tim.Scroll(5);
+            System.Diagnostics.Debug.WriteLine("DevChecks TIM T-5.7: hook saw '" + hookKeys + "' (expect hi<B>), indicators none=" + noIndicators + ", moreAbove=" + moreAbove + ", scrolledBack=" + tim.isScrolledBack);
+            tim.Scroll(-1000);
+            tim.ClearHistory();
+
+            // Visual aid: GITC_DEVSCROLL=1 fills the running debug mission's console so the scroll indicators can be seen
+            if (Environment.GetEnvironmentVariable("GITC_DEVSCROLL") == "1")
+            {
+                TIMModule liveTim = (TIMModule)game.currGameState.currMission.moduleManager.Get(ModuleTypes.tim);
+                for (int i = 0; i < 40; i++)
+                    liveTim.AddHistoryLines("history line " + i);
+                liveTim.Scroll(5);
+            }
+
             // T-5.6: timed command challenges (simulated, 1 second per frame)
             Mission chal = new Mission(game, new MissionDef() { id = "debug_challenge", durationSeconds = 60, startingOps = 30 });
             TIMModule chalTim = (TIMModule)chal.moduleManager.Get(ModuleTypes.tim);

@@ -27,6 +27,15 @@ namespace GITC.Core
         public CommandRegistry commandRegistry { get; set; }
         // Commands the player has been told to type, with their countdowns
         public List<CommandChallenge> challenges { get; set; }
+        // Called for every key the player types into the console: the character, '\b' for Backspace, '\n' for Enter.
+        // Audio hooks in here (Phase 12).
+        public Action<char> onKeyTyped { get; set; }
+        // Cursor blinks twice a second and restarts solid whenever the player types
+        private double totalSeconds { get; set; }
+        private double lastTypedSeconds { get; set; }
+        // Older lines exist above what is shown / the view is scrolled back from the newest line
+        public bool hasMoreAbove { get { return history.Count > scrollOffset + CONSOLEHISTORY_SIZE; } }
+        public bool isScrolledBack { get { return scrollOffset > 0; } }
         private VirtualFileSystem _fileSystem;
         // Created on first use: the game state (and its SaveManager) does not exist yet while the first mission is being built
         public VirtualFileSystem fileSystem
@@ -68,6 +77,7 @@ namespace GITC.Core
         public override void Update(GameTime gameTime)
         {
             // Count down each challenge; one that runs out raises command_failed (Mission turns it into an OP penalty)
+            totalSeconds = gameTime.TotalGameTime.TotalSeconds;
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
             foreach (CommandChallenge challenge in challenges.ToArray())
             {
@@ -119,10 +129,12 @@ namespace GITC.Core
             {
                 if (inputText.Length > 0)
                     inputText.Remove(inputText.Length - 1, 1);
+                KeyTyped('\b');
             }
             // Handle Enter/Return
             else if (e.Key == Keys.Enter)
             {
+                KeyTyped('\n');
                 SubmitText();
             }
             // Append valid character typing (filters out unprintable keys automatically)
@@ -132,8 +144,16 @@ namespace GITC.Core
                 {
                     recallIndex = -1;
                     inputText.Append(e.Character);
+                    KeyTyped(e.Character);
                 }
             }
+        }
+
+        // Restarts the cursor blink and tells the typing hook
+        private void KeyTyped(char key)
+        {
+            lastTypedSeconds = totalSeconds;
+            onKeyTyped?.Invoke(key);
         }
 
         // Splits text into console-width lines; explicit line breaks are kept, an empty line stays one empty line
@@ -276,12 +296,30 @@ namespace GITC.Core
                                        new Vector2(originX, strip.Y), urgent ? Color.Red : Color.Yellow);
             }
 
-            // Cursor
+            // Scrollback indicators: older lines above the view, and a way back to the newest line
+            int indicatorY = region.Y + 4 + challenges.Count * textHeight;
+            if (hasMoreAbove)
+                DrawIndicator(spriteBatch, font, "^ MORE ABOVE (PgUp)", indicatorY);
+            if (isScrolledBack)
+                DrawIndicator(spriteBatch, font, "v " + scrollOffset + " LINES BELOW (PgDn)", originY + textHeight);
+
+            // Cursor, blinking
+            bool cursorOn = ((totalSeconds - lastTypedSeconds) % 1.0) < 0.5;
             Rectangle cursRect = new Rectangle(new Point(visibleInput.Length * textWidth + originX,
                                                          (textHeight / 4) * 3 + originY),
                                                new Point(textWidth,
                                                          textHeight / 4));
-            spriteBatch.Draw(currGame._content.pixel, cursRect, Color.White);
+            if (cursorOn)
+                spriteBatch.Draw(currGame._content.pixel, cursRect, Color.White);
+        }
+
+        // Small right-aligned label on a black strip
+        private void DrawIndicator(SpriteBatch spriteBatch, SpriteFont font, string text, int y)
+        {
+            Vector2 size = font.MeasureString(text);
+            Rectangle area = new Rectangle(region.Right - CONSOLEMINWIDTH - (int)size.X - 8, y, (int)size.X + 8, (int)size.Y);
+            spriteBatch.Draw(currGame._content.pixel, area, Color.Black * 0.85f);
+            spriteBatch.DrawString(font, text, new Vector2(area.X + 4, y), Color.Gray);
         }
 
         // Centered in the region, faint, as authored (point sampling keeps the pixel art crisp)
