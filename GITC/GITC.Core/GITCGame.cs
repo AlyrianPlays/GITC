@@ -60,6 +60,9 @@ namespace GITC.Core
 
             Content.RootDirectory = "Content";
 
+            // The OS pointer is hidden; DrawCursor draws the in-game cursor in logical coordinates (T-3.5)
+            IsMouseVisible = false;
+
             // Configure screen orientations.
             graphicsDeviceManager.SupportedOrientations = DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
         }
@@ -140,6 +143,62 @@ namespace GITC.Core
             Rectangle view = GetLetterboxRect();
             return new Point((int)((screenPoint.X - view.X) * Globals.ScreenWidthLogical / view.Width),
                              (int)((screenPoint.Y - view.Y) * Globals.ScreenHeightLogical / view.Height));
+        }
+
+        // Arrow cursor, one char per art pixel: O outline, X fill, . transparent. The tip (0,0) is the hotspot.
+        private static readonly string[] cursorArt =
+        {
+            "O...........",
+            "OO..........",
+            "OXO.........",
+            "OXXO........",
+            "OXXXO.......",
+            "OXXXXO......",
+            "OXXXXXO.....",
+            "OXXXXXXO....",
+            "OXXXXXXXO...",
+            "OXXXXXXXXO..",
+            "OXXXXXXXXXO.",
+            "OXXXXXXOOOOO",
+            "OXXOXXO.....",
+            "OXO.OXXO....",
+            "OO..OXXO....",
+            "O....OXXO...",
+            ".....OOOO..."
+        };
+        private const int CURSORSCALE = 2;
+
+        /// <summary>
+        /// Draws the in-game cursor at the mouse position (logical coordinates), filled with the theme colour.
+        /// Hidden while the window is inactive or the mouse is outside the letterboxed picture.
+        /// To use art instead, add Content/Cursor.png, a texture manifest key "cursor", and draw it here at the same point.
+        /// </summary>
+        private void DrawCursor()
+        {
+            if (!IsActive)
+                return;
+            Point mouse = currGameState.input.mouseLogical;
+            if (mouse.X < 0 || mouse.Y < 0 || mouse.X >= (int)Globals.ScreenWidthLogical || mouse.Y >= (int)Globals.ScreenHeightLogical)
+                return;
+
+            // White theme (neutral) would vanish into the white outline, so it gets a black fill
+            Color theme = currGameState.currentTheme.color;
+            Color fill = theme == Color.White ? Color.Black : theme;
+
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            for (int y = 0; y < cursorArt.Length; y++)
+            {
+                for (int x = 0; x < cursorArt[y].Length; x++)
+                {
+                    char c = cursorArt[y][x];
+                    if (c == '.')
+                        continue;
+                    _spriteBatch.Draw(_content.pixel,
+                                      new Rectangle(mouse.X + x * CURSORSCALE, mouse.Y + y * CURSORSCALE, CURSORSCALE, CURSORSCALE),
+                                      c == 'O' ? Color.White : fill);
+                }
+            }
+            _spriteBatch.End();
         }
 
         /// <summary>
@@ -265,6 +324,9 @@ namespace GITC.Core
             _spriteBatch.End();
 
             currGameState.DrawOverlay(_spriteBatch);
+
+            //Cursor goes on top of everything, including the pause and result overlays
+            DrawCursor();
 
             //Reset RenderTarget and draw the target to the back buffer, uniformly scaled and letterboxed
             GraphicsDevice.SetRenderTarget(null);
