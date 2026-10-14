@@ -26,6 +26,8 @@ namespace GITC.Core
         public GameStates currentGameState { get; set; }
         public InputManager input { get; set; }
         public Mission currMission { get; set; }
+        // Colours the module borders and logo; follows the mission, the overworld sets its own
+        public CompanyTheme currentTheme { get; set; }
         // The running mission's modules (null outside a mission)
         public ModuleManager moduleManager { get { return currMission?.moduleManager; } }
         public SaveManager saveManager { get; set; }
@@ -54,6 +56,7 @@ namespace GITC.Core
         {
             this.currGame = currGame;
             input = new InputManager(currGame);
+            currentTheme = CompanyTheme.neutral;
             saveManager = new SaveManager();
             saveManager.Load();
             StartDebugMission();
@@ -78,11 +81,13 @@ namespace GITC.Core
                 debugDef.durationSeconds = debugSeconds;
             currMission = new Mission(currGame, debugDef);
             missionReported = false;
+            currentTheme = currMission.theme;
         }
 
         private void ReturnToOverworld()
         {
             currMission = null;
+            currentTheme = CompanyTheme.neutral;
             currentGameState = GameStates.overworld;
         }
 

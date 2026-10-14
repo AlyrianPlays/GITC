@@ -217,11 +217,12 @@ namespace GITC.Core
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
             // Draw background elements
+            //The module border overlay takes the company colour (white x colour at its own alpha 120/255, see docs/THEMING.md)
             foreach (String s in _backgroundKeys)
             _spriteBatch.Draw(_content.GetTexture(s),
                                 new Vector2(0, 0),
                                 null,
-                                Color.White,
+                                s == "hud_screen_overlay" ? currGameState.currentTheme.color : Color.White,
                                 0,
                                 Vector2.Zero,
                                 1,

@@ -11,6 +11,8 @@ namespace GITC.Core
         public MissionDef def { get; set; }
         public ModuleManager moduleManager { get; set; }
         public MissionStatus status { get; set; }
+        // Border colour and logo for the mission's company (neutral if the company is unknown)
+        public CompanyTheme theme { get; set; }
         // Seconds left on the clock (counts down while the mission is running)
         public float timeRemaining { get; set; }
         public int operatorPoints { get; set; }
@@ -25,6 +27,7 @@ namespace GITC.Core
             operatorPoints = def.startingOps;
             maxOperatorPoints = def.startingOps;
             status = MissionStatus.running;
+            theme = CompanyTheme.FromCompany(def.companyId);
 
             moduleManager = new ModuleManager(currGame);
             moduleManager.eventHandler = HandleEvent;
