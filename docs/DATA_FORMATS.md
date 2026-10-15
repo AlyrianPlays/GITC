@@ -49,7 +49,7 @@ The C# classes in `GITC.Core/Data/` are the source of truth for field meaning (e
 ### `ModuleConfig`
 `module`, `enabled` (true), `difficulty` (1), and one of: `maze` (`MazeConfig`), `favLevelFile`, `vitals` (`VitalsConfig`), `him` (`HimConfig`).
 
-- `MazeConfig`: `width`, `height` (0 = from difficulty), `seed` (0 = random), `revealRadius` (0 = all), `regenerateOnFail`.
+- `MazeConfig`: `width`, `height` (0 = from difficulty), `seed` (0 = random), `revealRadius` (0 = all), `regenerateOnFail`, `wrongTurnPenalty` (10), `timeLimitSeconds` (60, used when a `maze_required` event gives no time), `timeoutPenalty` (10). The LVM only shows a maze after a `maze_required` event (amount = seconds, 0 = use `timeLimitSeconds`); a company or mission makes mazes tighter by sending shorter times and more requests.
 - `VitalsConfig`: `heartRate`, `sanity`, `temperature`, each a `VitalRange`: `start`, `safeMin`, `safeMax`, `driftPerSecond`, `deathSeconds` (10).
 - `HimConfig`: `sequenceLength` (4), `stepMilliseconds` (600), `inputTimeoutSeconds` (10), `allowReplay`, `minIntervalSeconds`, `maxIntervalSeconds`.
 

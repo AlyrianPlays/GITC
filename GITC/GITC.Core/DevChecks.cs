@@ -6,6 +6,13 @@ namespace GITC.Core
     //TESTING, REMOVE AFTER: startup self-checks for the data layer. Set env var GITC_DEVCHECKS=1 to also echo Debug output to the console.
     internal static class DevChecks
     {
+        private static void StepTo(LVMModule lvm, Microsoft.Xna.Framework.Point target)
+        {
+            foreach (int dir in new[] { MazeGenerator.NORTH, MazeGenerator.SOUTH, MazeGenerator.EAST, MazeGenerator.WEST })
+                if (lvm.playerCell.X + MazeGenerator.OffsetX(dir) == target.X && lvm.playerCell.Y + MazeGenerator.OffsetY(dir) == target.Y)
+                    lvm.TryMove(dir);
+        }
+
         private static void SimulateSeconds(GITCGame game, Mission mission, int seconds)
         {
             for (int s = 1; s <= seconds; s++)
@@ -201,6 +208,81 @@ namespace GITC.Core
             fix.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(1)), game.currGameState.input);
             System.Diagnostics.Debug.WriteLine("DevChecks sanity: default states HR/sanity/temp=" + defaultStates + " (expect normal/normal/normal), low sanity=" + sanityLow + " asks '" + sanityAsk + "', after reassure=" + fixVm.model.Get(Vitals.sanity).value + " (expect 50), HR untouched=" + (fixVm.model.Get(Vitals.heart_rate).value == hrBefore));
             System.Diagnostics.Debug.WriteLine("DevChecks vital commands: challenge='" + asked + "' (expect calm in 6s), HR after calm=" + hrFixed + " (expect 100), sanity after calm=" + sanityAfter + " (expect 100, calm leaves it alone), second calm='" + coolOut + "', challenges left=" + fixTim.challenges.Count + ", OP=" + fix.operatorPoints + ", temp after warm=" + fixVm.model.Get(Vitals.temperature).value.ToString("0.0") + " (expect 38.5)");
+
+            // T-7.1: perfect mazes from 5x5 to 25x25 (n*m-1 passages = connected with no loops), start left, exit right, one solution
+            string mazeReport = "";
+            foreach (int side in new[] { 5, 9, 15, 25 })
+            {
+                MazeGenerator mg = new MazeGenerator(side, side, 100 + side);
+                mazeReport += side + "x" + side + ": passages=" + mg.CountPassages() + " (expect " + (side * side - 1) + "), solution=" + mg.solution.Count + ", start.X=" + mg.start.X + ", exit.X=" + mg.exit.X + "; ";
+            }
+            MazeGenerator again = new MazeGenerator(9, 9, 109);
+            MazeGenerator same = new MazeGenerator(9, 9, 109);
+            System.Diagnostics.Debug.WriteLine("DevChecks maze: " + mazeReport.Trim() + " same seed identical=" + (again.ToAscii() == same.ToAscii()) + ", difficulty 1/5/20 sizes=" + MazeGenerator.SizeFor(1) + "/" + MazeGenerator.SizeFor(5) + "/" + MazeGenerator.SizeFor(20));
+            System.Diagnostics.Debug.WriteLine("DevChecks maze 5x5 ASCII:" + Environment.NewLine + new MazeGenerator(5, 5, 7).ToAscii());
+            if (Environment.GetEnvironmentVariable("GITC_DEVMAZE") == "1")
+                System.Diagnostics.Debug.WriteLine("DevChecks maze 25x25 ASCII:" + Environment.NewLine + new MazeGenerator(25, 25, 25).ToAscii());
+
+            // T-7.2: wrong turn costs OPs and resets; walls block silently; reaching the exit builds a bigger maze
+            MazeConfig lvmCfg = new MazeConfig() { seed = 42 };
+            Mission lvmMission = new Mission(game, new MissionDef() { id = "debug_lvm", durationSeconds = 120, startingOps = 30, modules = new List<ModuleConfig>() { new ModuleConfig() { module = "lvm", maze = lvmCfg } } });
+            string lvmSeen = "";
+            System.Action<ModuleEvent> lvmPrev = lvmMission.moduleManager.eventHandler;
+            lvmMission.moduleManager.eventHandler = e => { lvmSeen += e.type + " "; lvmPrev(e); };
+            LVMModule lvm = (LVMModule)lvmMission.moduleManager.Get(ModuleTypes.lvm);
+            bool idleAtStart = !lvm.isChallengeActive;
+            lvmMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.maze_required, ModuleTypes.pm, 30));
+            SimulateSeconds(game, lvmMission, 1);
+            bool activeAfterRequest = lvm.isChallengeActive;
+            string focusLvm = lvmMission.moduleManager.focusedModule.ToString();
+            MazeGenerator firstMaze = lvm.maze;
+            // Walk the solution until a cell has an open side that leaves it, then step off
+            int wallBlocks = 0;
+            foreach (int dir in new[] { MazeGenerator.NORTH, MazeGenerator.SOUTH, MazeGenerator.EAST, MazeGenerator.WEST })
+                if (!lvm.maze.IsOpen(lvm.playerCell, dir)) { Microsoft.Xna.Framework.Point wallFrom = lvm.playerCell; lvm.TryMove(dir); if (lvm.playerCell == wallFrom) wallBlocks++; }
+            bool wrongDone = false;
+            for (int i = 0; i < lvm.maze.solution.Count && !wrongDone; i++)
+            {
+                Microsoft.Xna.Framework.Point cell = lvm.maze.solution[i];
+                foreach (int dir in new[] { MazeGenerator.NORTH, MazeGenerator.SOUTH, MazeGenerator.EAST, MazeGenerator.WEST })
+                {
+                    Microsoft.Xna.Framework.Point off = new Microsoft.Xna.Framework.Point(cell.X + MazeGenerator.OffsetX(dir), cell.Y + MazeGenerator.OffsetY(dir));
+                    if (lvm.maze.IsOpen(cell, dir) && !lvm.maze.solutionSet.Contains(off))
+                    {
+                        for (int s = 1; s <= i; s++) StepTo(lvm, lvm.maze.solution[s]);
+                        lvm.TryMove(dir);
+                        wrongDone = true;
+                        break;
+                    }
+                }
+            }
+            SimulateSeconds(game, lvmMission, 1);
+            bool resetToStart = lvm.playerCell == lvm.maze.start && lvm.path.Count == 1;
+            bool sameMaze = lvm.maze == firstMaze;
+            int opsAfterWrong = lvmMission.operatorPoints;
+            for (int s = 1; s < lvm.maze.solution.Count; s++) StepTo(lvm, lvm.maze.solution[s]);
+            SimulateSeconds(game, lvmMission, 1);
+            System.Diagnostics.Debug.WriteLine("DevChecks LVM: walls blocked=" + wallBlocks + " with no penalty, wrong turn done=" + wrongDone + ", reset to start=" + resetToStart + ", same maze kept=" + sameMaze + ", OP=" + opsAfterWrong + " (expect 20), after solving: completed=" + lvm.mazesCompleted + ", standing by=" + !lvm.isChallengeActive + ", difficulty=" + lvm.difficulty + " (expect 1, True, 1), idle at start=" + idleAtStart + ", active after request=" + activeAfterRequest + ", focus=" + focusLvm + " (expect True, True, lvm), events: " + lvmSeen.Trim());
+            // A request that is not answered in time costs OPs; requests while a maze is running are ignored
+            int opsBeforeTimeout = lvmMission.operatorPoints;
+            lvmMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.maze_required, ModuleTypes.pm, 3));
+            SimulateSeconds(game, lvmMission, 1);
+            MazeGenerator runningMaze = lvm.maze;
+            lvmMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.maze_required, ModuleTypes.pm, 99));
+            SimulateSeconds(game, lvmMission, 1);
+            bool ignoredWhileActive = lvm.maze == runningMaze;
+            SimulateSeconds(game, lvmMission, 3);
+            System.Diagnostics.Debug.WriteLine("DevChecks LVM timeout: failed=" + lvm.mazesFailed + ", standing by=" + !lvm.isChallengeActive + ", OP " + opsBeforeTimeout + " -> " + lvmMission.operatorPoints + " (expect 1, True, 10 less), second request ignored while active=" + ignoredWhileActive + ", events: " + lvmSeen.Trim());
+
+            // Visual aid: GITC_DEVLIDAR=1 walks the running mission's LVM six steps along the solution; =2 also turns the lidar radius on
+            string devLidar = Environment.GetEnvironmentVariable("GITC_DEVLIDAR");
+            if (devLidar == "1" || devLidar == "2")
+            {
+                LVMModule runLvm = (LVMModule)game.currGameState.currMission.moduleManager.Get(ModuleTypes.lvm);
+                runLvm.StartChallenge(120);
+                if (devLidar == "2") runLvm.config.revealRadius = 4;
+                for (int s = 1; s <= 6; s++) StepTo(runLvm, runLvm.maze.solution[s]);
+            }
 
             // Visual aid: GITC_DEVVITALS=1 pushes the running debug mission's vitals into warning/critical so the monitor can be seen
             if (Environment.GetEnvironmentVariable("GITC_DEVVITALS") == "1")

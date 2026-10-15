@@ -86,6 +86,9 @@ namespace GITC.Core
             //TESTING: env var GITC_DEBUGCHALLENGE=1 raises a 30 s command challenge at the start so the banner can be seen without keys
             if (Environment.GetEnvironmentVariable("GITC_DEBUGCHALLENGE") == "1")
                 currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, 30, "unlock barrier"));
+            //TESTING: env var GITC_DEBUGMAZE=1 raises a 60 s maze request at the start
+            if (Environment.GetEnvironmentVariable("GITC_DEBUGMAZE") == "1")
+                currMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.maze_required, ModuleTypes.pm, 60));
         }
 
         private void ReturnToOverworld()

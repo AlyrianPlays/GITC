@@ -164,6 +164,7 @@ namespace GITC.Core
         him_started,
         him_ended,
         maze_failed,
+        maze_required,
         maze_completed,
         vital_critical,
         vital_nudge,

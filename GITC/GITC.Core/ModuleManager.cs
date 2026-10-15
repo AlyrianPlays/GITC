@@ -32,7 +32,8 @@ namespace GITC.Core
             //TESTING, REMOVE AFTER: placeholders until each real module exists
             modules.Add(new TIMModule(currGame));
             modules.Add(new PlaceholderModule(currGame, ModuleTypes.fav, HudLayout.FAV, Color.Orange));
-            modules.Add(new PlaceholderModule(currGame, ModuleTypes.lvm, HudLayout.LVM, Color.Lime));
+            ModuleConfig lvmConfig = def?.modules.Find(m => m.module == "lvm");
+            modules.Add(new LVMModule(currGame, lvmConfig?.maze ?? new MazeConfig(), lvmConfig?.difficulty ?? 1));
             ModuleConfig vmConfig = def?.modules.Find(m => m.module == "vm");
             modules.Add(new VMModule(currGame, vmConfig?.vitals ?? new VitalsConfig()));
 
