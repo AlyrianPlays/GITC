@@ -429,6 +429,23 @@ namespace GITC.Core
             RunMissionFav(game, lifeMission, lifeFav.world, 6f, 0);
             System.Diagnostics.Debug.WriteLine("DevChecks FAV heart rate: start " + hrStart + ", 3 s four tiles from an enemy " + hrNear.ToString("0.0") + " (expect about +18), hidden 2 s " + hrHiding.ToString("0.0") + " (expect about -12), hidden 8 s " + lifeVm.model.Get(Vitals.heart_rate).value.ToString("0.0") + " (expect resting " + lifeVm.model.Get(Vitals.heart_rate).range.start + ")");
 
+            // Regression (owner report: S did not hide): standing still must read as grounded after EVERY frame for any frame length,
+            // including MonoGame's 0.0166667 s, which used to leave a ~3e-8 s physics slice that ended the frame 'in the air'
+            string groundReport = "";
+            foreach (float frame in new[] { 1f / 60f, (float)TimeSpan.FromTicks(166667).TotalSeconds, 0.0166666f, 1f / 144f, 0.0333334f })
+            {
+                FavWorld stand = new FavWorld(FavLevelDef.Flat(30, 8));
+                int airborneFrames = 0;
+                for (int f = 0; f < 120; f++)
+                {
+                    stand.Update(frame);
+                    if (f >= 30 && !stand.isGrounded) airborneFrames++;
+                }
+                stand.ToggleHide();
+                groundReport += frame.ToString("0.0000000") + "s: airborne frames=" + airborneFrames + " hides=" + stand.isHidden + "; ";
+            }
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV standing/hide per frame length (expect 0 and True each): " + groundReport.Trim());
+
             // Visual aid: GITC_DEVFAV=1 puts the running mission's agent, hidden, a few tiles from guard_a so the enemy and its cone are on screen;
             // =2 puts it at column 70 so the spikes, drone_b and the barrier are in view
             string devFav = Environment.GetEnvironmentVariable("GITC_DEVFAV");

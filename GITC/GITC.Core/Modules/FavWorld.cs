@@ -59,6 +59,9 @@ namespace GITC.Core
         public const float BARRIERRETRYSECONDS = 1.5f;
         // Physics runs in fixed slices so a long frame (or a simulated second) can't tunnel through a tile
         private const float STEP = 1f / 120f;
+        private const float MINSLICE = 0.0001f;
+        // Feet this close above a solid tile count as standing on it, however small the slice's fall was
+        private const float GROUNDPROBE = 0.05f;
 
         public FavWorld(FavLevelDef level)
         {
@@ -179,7 +182,8 @@ namespace GITC.Core
         public void Update(float deltaSeconds)
         {
             float remaining = Math.Min(deltaSeconds, 1f);
-            while (remaining > 0f)
+            // Float leftovers (a 0.0166667 s frame minus two slices leaves ~3e-8 s) are skipped, not run as a near-zero slice
+            while (remaining > MINSLICE)
             {
                 float dt = Math.Min(STEP, remaining);
                 Step(dt);
@@ -291,7 +295,7 @@ namespace GITC.Core
             isGrounded = false;
             int left = Floor(p.X);
             int right = Floor(p.X + agentWidth - 0.01f);
-            int row = dy > 0f ? Floor(p.Y + agentHeight - 0.01f) : Floor(p.Y);
+            int row = dy > 0f ? Floor(p.Y + agentHeight + GROUNDPROBE) : Floor(p.Y);
             for (int x = left; x <= right; x++)
                 if (IsSolid(x, row))
                 {
