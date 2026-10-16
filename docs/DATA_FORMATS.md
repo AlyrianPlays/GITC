@@ -54,7 +54,24 @@ The C# classes in `GITC.Core/Data/` are the source of truth for field meaning (e
 - `HimConfig`: `sequenceLength` (4), `stepMilliseconds` (600), `inputTimeoutSeconds` (10), `allowReplay`, `minIntervalSeconds`, `maxIntervalSeconds`.
 
 ## `fav/<id>.json` — `FavLevelDef`
-`id`, `tileSize` (16), `tiles` (list of row strings, `.` empty / `#` solid), `spawnX`, `spawnY`, `goalX`. Enemies and barriers come in T-8.2/T-8.3.
+One side-scrolling segment for the Field Agent Visualizer. Coordinates are tiles (column x, row y, row 0 at the top); the level is bottom-aligned in the quadrant (480 px tall, so 20 rows of 24 px fill it).
+Used when a mission's `fav` `ModuleConfig` names it in `favLevelFile`; otherwise `fav/test_level.json`. A missing file falls back to a flat strip.
+
+| Field | Default | Meaning |
+|---|---|---|
+| `id` | | Segment name |
+| `tileSize` | `16` | Pixels per tile (the test level uses 24) |
+| `tiles` | `[]` | Row strings: `.` empty, `#` solid, `^` spikes (deadly in the lower 45% of the tile). A missing floor is a pit (falling out kills) |
+| `spawnX`, `spawnY` | | Spawn tile; `spawnY` is the row the agent stands in (its feet are on the row below) |
+| `goalX` | | Reaching the middle of this column clears the segment |
+| `goalBonus` | `5` | OPs gained at the goal (`op_gain`, tag `fav_goal`) |
+| `deathPenalty` | `10` | OPs lost when the agent dies here (`op_penalty`, tag `fav_death`). Deaths caused by the Vital Monitor don't use it; that penalty is the mission's (T-9.3) |
+| `nextLevelFile` | | Segment loaded after the goal; empty replays this one |
+| `enemies` | `[]` | `FavEnemyDef` list (below) |
+| `barriers` | `[]` | `FavBarrierDef` list (below) |
+
+- `FavEnemyDef`: `id`, `x`, `y` (start tile, row it stands in), `patrolFromX`, `patrolToX` (equal = stationary guard), `speed` (2 tiles/s), `sightRange` (6 tiles), `detectSeconds` (0.6, time in view before it spots the agent), `lethal` (true: spotting kills; false: costs `damage` OPs, knocks the agent back, 2 s grace), `damage` (10), `facing` (1 = right, -1 = left). Hidden agents are never seen; walls block sight.
+- `FavBarrierDef`: `id`, `x`, `y` (top row), `height` (1), `command`, `seconds` (10). Solid until the TIM answers: touching it raises `command_required` (tag = `command`, amount = `seconds`); `command_satisfied` opens it for the rest of the segment, `command_failed` leaves it shut and it can be asked again after 1.5 s.
 
 ## `commands.json` — `List<CommandDef>`
 `name`, `aliases`, `description`, `hidden`, `scope` (`anywhere`/`mission`/`overworld`), `cooldownSeconds` (0 = none), `requires` (save flags).

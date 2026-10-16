@@ -7,6 +7,8 @@ namespace GITC.Core
     // Field Agent Visualizer: a small side-scroller in the lower-left quadrant. A (left), D (right), Space (jump),
     // S (hide, toggles while grounded). The world keeps running when the module is not focused; the agent just stands still.
     // The camera is a plain horizontal offset that follows the agent (the GOLDEN FORMULA camera is not involved).
+    // Deaths cost OPs and the agent respawns (agent_revived resets the Vital Monitor); the goal gains OPs and loads the next segment.
+    // The agent's heart rate follows the action: up near enemies and while watched, down while hidden (never below resting).
     internal class FAVModule : GameModule
     {
         public FavWorld world { get; set; }
@@ -15,6 +17,7 @@ namespace GITC.Core
         // Left edge of the view in world pixels
         public float cameraX { get; set; }
         public int deaths { get; set; }
+        public int segmentsCompleted { get; set; }
         // Counts down while the agent is down; the agent respawns at zero
         public float respawnSeconds { get; set; }
         // Text and countdown for the header after a death or a hit
@@ -24,6 +27,18 @@ namespace GITC.Core
 
         public const string DEFAULTLEVELFILE = "fav/test_level.json";
         public const float RESPAWNSECONDS = 2f;
+        // Death cause used when the Vital Monitor killed the agent (the VM has already raised agent_died)
+        public const string VITALSCAUSE = "vitals";
+        // Heart rate pressure in bpm per second: an enemy within ENEMYRANGE tiles (scaled by closeness), being watched
+        // (scaled by the highest alert), and hiding (only while above resting); a non-lethal hit adds HITBPM at once
+        public const float ENEMYRANGE = 8f;
+        public const float NEARBPM = 12f;
+        public const float WATCHEDBPM = 15f;
+        public const float HIDDENCALMBPM = 6f;
+        public const float HITBPM = 20f;
+
+        // Heart rate change not yet sent (vital_nudge carries whole tenths)
+        private float heartRemainder { get; set; }
 
         public FAVModule(GITCGame currGame, string levelFile) : base(currGame, ModuleTypes.fav, HudLayout.FAV)
         {
@@ -46,8 +61,37 @@ namespace GITC.Core
         {
             deaths++;
             respawnSeconds = RESPAWNSECONDS;
+            heartRemainder = 0f;
             ShowFlash("AGENT DOWN (" + cause.ToUpper() + ")");
+            // A vitals death was already announced by the VM; its penalties are the mission's call (double-penalty rule, T-9.3)
+            if (cause == VITALSCAUSE)
+                return;
             Raise(new ModuleEvent(ModuleEventTypes.agent_died, ModuleTypes.fav, 0, cause));
+            Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.fav, world.level.deathPenalty, "fav_death"));
+        }
+
+        private void Respawn()
+        {
+            world.Respawn();
+            // Spawn protection, so a guard that can see the spawn can't kill the agent again straight away
+            world.graceSeconds = FavWorld.GRACESECONDS;
+            Raise(new ModuleEvent(ModuleEventTypes.agent_revived, ModuleTypes.fav));
+        }
+
+        // Goal reached: bonus OPs, then the next segment (or this one again)
+        private void SegmentCompleted()
+        {
+            segmentsCompleted++;
+            int bonus = world.level.goalBonus;
+            Raise(new ModuleEvent(ModuleEventTypes.op_gain, ModuleTypes.fav, bonus, "fav_goal"));
+            FavLevelDef next = world.level;
+            if (!string.IsNullOrEmpty(world.level.nextLevelFile))
+            {
+                levelFile = world.level.nextLevelFile;
+                next = LoadLevel(levelFile);
+            }
+            SetWorld(new FavWorld(next));
+            ShowFlash("SEGMENT CLEAR +" + bonus + " OP");
         }
 
         // A non-lethal enemy spotted the agent: the enemy's damage is an OP penalty
@@ -55,6 +99,7 @@ namespace GITC.Core
         {
             ShowFlash("SPOTTED! -" + enemy.def.damage + " OP");
             Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.fav, enemy.def.damage, "fav_spotted"));
+            heartRemainder += HITBPM;
         }
 
         // The agent is stuck at a barrier: ask the TIM for its command (the TIM takes focus and shows the countdown)
@@ -66,6 +111,13 @@ namespace GITC.Core
         // The TIM's answer to a barrier request: satisfied opens it, failed leaves it shut (Mission charges the OPs for command_failed)
         public override void OnEvent(ModuleEvent moduleEvent)
         {
+            // The Vital Monitor lost the agent: this ends the field session too (the agent drops and respawns)
+            if (moduleEvent.type == ModuleEventTypes.agent_died && moduleEvent.source != ModuleTypes.fav)
+            {
+                world.KillAgent(VITALSCAUSE);
+                return;
+            }
+
             FavBarrierDef pending = world.level.barriers.Find(b => b.id == world.requestedBarrier);
             if (pending == null || CommandChallenge.Normalize(moduleEvent.tag) != CommandChallenge.Normalize(pending.command))
                 return;
@@ -112,17 +164,53 @@ namespace GITC.Core
             {
                 respawnSeconds -= dt;
                 if (respawnSeconds <= 0f)
-                {
-                    world.Respawn();
-                    // Spawn protection, so a guard that can see the spawn can't kill the agent again straight away
-                    world.graceSeconds = FavWorld.GRACESECONDS;
-                }
+                    Respawn();
             }
             world.Update(dt);
+            if (!world.isAgentDown && world.agentCenter.X >= (world.level.goalX + 0.5f) * world.tileSize)
+                SegmentCompleted();
+            else if (!world.isAgentDown)
+                PushHeartRate(dt);
             FollowAgent();
             // Intent only lasts one frame; an unfocused FAV gets none, so the agent stops
             world.moveDirection = 0;
             world.jumpRequested = false;
+        }
+
+        // Sends this frame's heart rate pressure to the Vital Monitor (needs one, with the agent still alive on it)
+        private void PushHeartRate(float dt)
+        {
+            VitalsModel vitals = (manager?.Get(ModuleTypes.vm) as VMModule)?.model;
+            if (vitals == null || vitals.isDead)
+            {
+                heartRemainder = 0f;
+                return;
+            }
+            Vital heart = vitals.Get(Vitals.heart_rate);
+
+            float nearest = float.MaxValue;
+            float watched = 0f;
+            foreach (FavEnemy enemy in world.enemies)
+            {
+                Vector2 enemyCenter = enemy.position + new Vector2(enemy.width, enemy.height) / 2f;
+                nearest = Math.Min(nearest, Vector2.Distance(enemyCenter, world.agentCenter) / world.tileSize);
+                watched = Math.Max(watched, enemy.alert);
+            }
+            float change = 0f;
+            if (nearest < ENEMYRANGE)
+                change += NEARBPM * (1f - nearest / ENEMYRANGE) * dt;
+            change += WATCHEDBPM * watched * dt;
+            // Hiding calms the agent down to its resting rate, never below (so hiding can't cause a too-low heart rate)
+            if (world.isHidden)
+                change -= Math.Min(HIDDENCALMBPM * dt, Math.Max(0f, heart.value + heartRemainder + change - heart.range.start));
+
+            heartRemainder += change;
+            int tenths = (int)(heartRemainder / VitalsModel.NUDGEUNIT);
+            if (tenths != 0)
+            {
+                Raise(new ModuleEvent(ModuleEventTypes.vital_nudge, ModuleTypes.fav, tenths, Vitals.heart_rate.ToString()));
+                heartRemainder -= tenths * VitalsModel.NUDGEUNIT;
+            }
         }
 
         // Agent centred horizontally, clamped to the level's ends
@@ -229,7 +317,7 @@ namespace GITC.Core
                           : waiting != null ? "BARRIER: TYPE '" + waiting.command.ToUpper() + "'"
                           : world.isHidden ? "HIDDEN" : "";
             spriteBatch.Draw(px, new Rectangle(region.X, region.Y, region.Width, MARGIN * 2), Color.Black * 0.6f);
-            spriteBatch.DrawString(font, "FIELD AGENT" + (isFocused ? "  [FOCUS]" : ""), new Vector2(region.X + MARGIN, region.Y + MARGIN / 2), terrainColor);
+            spriteBatch.DrawString(font, "FIELD AGENT  SEG " + (segmentsCompleted + 1) + (isFocused ? "  [FOCUS]" : ""), new Vector2(region.X + MARGIN, region.Y + MARGIN / 2), terrainColor);
             if (status.Length > 0)
                 spriteBatch.DrawString(font, status, new Vector2(region.Right - MARGIN - font.MeasureString(status).X, region.Y + MARGIN / 2), flashSeconds > 0f ? Color.Red : Color.Gold);
         }

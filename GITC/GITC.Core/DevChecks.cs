@@ -388,6 +388,47 @@ namespace GITC.Core
             bool stillShut = !gateFav.world.openBarriers.Contains("gate") && gateFav.world.agentPosition.X < 8 * gateFav.world.tileSize;
             System.Diagnostics.Debug.WriteLine("DevChecks FAV barrier missed: still shut=" + stillShut + ", OP=" + gateMission.operatorPoints + " (expect True, 20), asked again after retry=" + (gateTim.challenges.Count == 1) + ", events: " + gateSeen.Trim());
 
+            // T-8.4: death costs OPs and the respawn revives the VM; the goal pays a bonus and reloads; a VM death drops the agent with no FAV penalty;
+            // the heart rate climbs near an enemy and comes back down to resting (not below) while hidden
+            Mission lifeMission = new Mission(game, new MissionDef() { id = "debug_fav_life", durationSeconds = 120, startingOps = 30 });
+            string lifeSeen = "";
+            System.Action<ModuleEvent> lifePrev = lifeMission.moduleManager.eventHandler;
+            lifeMission.moduleManager.eventHandler = e => { if ((e.source == ModuleTypes.fav || e.type == ModuleEventTypes.agent_died) && e.type != ModuleEventTypes.vital_nudge) lifeSeen += e.type + "(" + e.tag + ") "; lifePrev(e); };
+            FAVModule lifeFav = (FAVModule)lifeMission.moduleManager.Get(ModuleTypes.fav);
+            VMModule lifeVm = (VMModule)lifeMission.moduleManager.Get(ModuleTypes.vm);
+            lifeFav.SetWorld(new FavWorld(guardLevel(-1, true, 0)));
+            RunMissionFav(game, lifeMission, lifeFav.world, 1f, 0);
+            int opsAfterDeath = lifeMission.operatorPoints;
+            RunMissionFav(game, lifeMission, lifeFav.world, 2.5f, 0);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV death: OP 30 -> " + opsAfterDeath + " (expect 20), alive again=" + !lifeFav.world.isAgentDown + ", events: " + lifeSeen.Trim());
+            lifeSeen = "";
+            FavLevelDef goalDef = FavLevelDef.Flat(30, 8);
+            goalDef.goalX = 10;
+            lifeFav.SetWorld(new FavWorld(goalDef));
+            FavWorld beforeGoal = lifeFav.world;
+            RunMissionFav(game, lifeMission, lifeFav.world, 1.5f, 1);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV goal: segments=" + lifeFav.segmentsCompleted + ", OP=" + lifeMission.operatorPoints + " (expect 1, 25), new world=" + (lifeFav.world != beforeGoal) + ", back near spawn=" + (lifeFav.world.agentPosition.X < 5 * lifeFav.world.tileSize) + ", events: " + lifeSeen.Trim());
+            lifeSeen = "";
+            int opsBeforeVmDeath = lifeMission.operatorPoints;
+            lifeMission.moduleManager.Raise(new ModuleEvent(ModuleEventTypes.agent_died, ModuleTypes.vm, 0, "heart_rate"));
+            RunMissionFav(game, lifeMission, lifeFav.world, 0.5f, 0);
+            bool vmDropped = lifeFav.world.isAgentDown;
+            RunMissionFav(game, lifeMission, lifeFav.world, 2f, 0);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV vitals death: agent dropped=" + vmDropped + ", OP unchanged=" + (lifeMission.operatorPoints == opsBeforeVmDeath) + ", alive again=" + !lifeFav.world.isAgentDown + ", VM alive=" + !lifeVm.model.isDead + " (expect all True), events: " + lifeSeen.Trim());
+            FavLevelDef nearDef = FavLevelDef.Flat(30, 8);
+            nearDef.enemies.Add(new FavEnemyDef() { id = "watcher", x = 6, y = 5, patrolFromX = 6, patrolToX = 6, facing = 1 });
+            lifeFav.SetWorld(new FavWorld(nearDef));
+            float hrStart = lifeVm.model.Get(Vitals.heart_rate).value;
+            RunMissionFav(game, lifeMission, lifeFav.world, 3f, 0);
+            float hrNear = lifeVm.model.Get(Vitals.heart_rate).value;
+            lifeFav.SetWorld(new FavWorld(FavLevelDef.Flat(30, 8)));
+            RunMissionFav(game, lifeMission, lifeFav.world, 0.3f, 0);
+            lifeFav.world.ToggleHide();
+            RunMissionFav(game, lifeMission, lifeFav.world, 2f, 0);
+            float hrHiding = lifeVm.model.Get(Vitals.heart_rate).value;
+            RunMissionFav(game, lifeMission, lifeFav.world, 6f, 0);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV heart rate: start " + hrStart + ", 3 s four tiles from an enemy " + hrNear.ToString("0.0") + " (expect about +18), hidden 2 s " + hrHiding.ToString("0.0") + " (expect about -12), hidden 8 s " + lifeVm.model.Get(Vitals.heart_rate).value.ToString("0.0") + " (expect resting " + lifeVm.model.Get(Vitals.heart_rate).range.start + ")");
+
             // Visual aid: GITC_DEVFAV=1 puts the running mission's agent, hidden, a few tiles from guard_a so the enemy and its cone are on screen;
             // =2 puts it at column 70 so the spikes, drone_b and the barrier are in view
             string devFav = Environment.GetEnvironmentVariable("GITC_DEVFAV");

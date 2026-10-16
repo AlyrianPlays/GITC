@@ -16,10 +16,17 @@ namespace GITC.Core
         public int goalX { get; set; }
         public List<FavEnemyDef> enemies { get; set; }
         public List<FavBarrierDef> barriers { get; set; }
+        // OPs gained for reaching the goal, and lost when the agent dies here (not counting deaths caused by the vitals)
+        public int goalBonus { get; set; }
+        public int deathPenalty { get; set; }
+        // Segment loaded after the goal (under Content/Data/); empty replays this one
+        public string nextLevelFile { get; set; }
 
         public FavLevelDef()
         {
             tileSize = 16;
+            goalBonus = 5;
+            deathPenalty = 10;
             tiles = new List<string>();
             enemies = new List<FavEnemyDef>();
             barriers = new List<FavBarrierDef>();
