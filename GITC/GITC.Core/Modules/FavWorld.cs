@@ -34,6 +34,12 @@ namespace GITC.Core
         // Called once when the agent dies (cause: spotted, spikes, pit ...) and when a non-lethal enemy spots it
         public Action<string> onDeath { get; set; }
         public Action<FavEnemy> onDamaged { get; set; }
+        // Barriers the TIM has opened (they stay open through deaths), the one waiting on a command, and the wait before a retry
+        public HashSet<string> openBarriers { get; set; }
+        public string requestedBarrier { get; set; }
+        public float barrierRetrySeconds { get; set; }
+        // Called when the agent walks into a closed barrier that is not already waiting on the TIM
+        public Action<FavBarrierDef> onBarrierTouched { get; set; }
 
         // Tiles per second (squared for gravity). A jump clears about 3 tiles up and 5 across.
         public const float GRAVITY = 60f;
@@ -47,6 +53,10 @@ namespace GITC.Core
         public const float GRACESECONDS = 2f;
         public const float KNOCKBACKSPEED = 9f;
         public const float KNOCKBACKTIME = 0.25f;
+        // Spikes hurt in the lower part of their tile only, so the tile above them is safe
+        public const float SPIKEHEIGHT = 0.45f;
+        // After a missed barrier command, seconds before touching the barrier asks again
+        public const float BARRIERRETRYSECONDS = 1.5f;
         // Physics runs in fixed slices so a long frame (or a simulated second) can't tunnel through a tile
         private const float STEP = 1f / 120f;
 
@@ -59,6 +69,7 @@ namespace GITC.Core
             foreach (string row in level.tiles)
                 columns = Math.Max(columns, row.Length);
             enemies = new List<FavEnemy>();
+            openBarriers = new HashSet<string>();
             Respawn();
         }
 
@@ -97,7 +108,40 @@ namespace GITC.Core
 
         public bool IsSolid(int x, int y)
         {
-            return Tile(x, y) == '#';
+            return Tile(x, y) == '#' || BarrierAt(x, y) != null;
+        }
+
+        // The closed barrier covering a tile, if any
+        public FavBarrierDef BarrierAt(int x, int y)
+        {
+            foreach (FavBarrierDef b in level.barriers)
+                if (b.x == x && y >= b.y && y < b.y + b.height && !openBarriers.Contains(b.id))
+                    return b;
+            return null;
+        }
+
+        public void OpenBarrier(string id)
+        {
+            openBarriers.Add(id);
+            if (requestedBarrier == id)
+                requestedBarrier = null;
+        }
+
+        // The TIM command was missed: the barrier stays shut and can be asked again after a short wait
+        public void BarrierFailed(string id)
+        {
+            if (requestedBarrier != id)
+                return;
+            requestedBarrier = null;
+            barrierRetrySeconds = BARRIERRETRYSECONDS;
+        }
+
+        private void TouchBarrier(FavBarrierDef barrier)
+        {
+            if (requestedBarrier != null || barrierRetrySeconds > 0f)
+                return;
+            requestedBarrier = barrier.id;
+            onBarrierTouched?.Invoke(barrier);
         }
 
         // Walks the segment in quarter-tile steps; any solid tile on the way blocks the view
@@ -151,6 +195,7 @@ namespace GITC.Core
                 return;
             graceSeconds = Math.Max(0f, graceSeconds - dt);
             knockbackSeconds = Math.Max(0f, knockbackSeconds - dt);
+            barrierRetrySeconds = Math.Max(0f, barrierRetrySeconds - dt);
             CheckSpotted();
             if (isAgentDown)
                 return;
@@ -177,9 +222,11 @@ namespace GITC.Core
             MoveX(v.X * dt);
             MoveY(v.Y * dt);
 
-            // Fell out of the bottom of the level: back to the spawn (T-8.3 turns this into a death)
+            // Hazards: falling out of the bottom of the level, or touching the lower part of a spike tile
             if (agentPosition.Y > worldHeight)
-                Respawn();
+                KillAgent("pit");
+            else if (TouchingSpikes())
+                KillAgent("spikes");
         }
 
         // An enemy with a full alert spots the agent: lethal ones kill it, the others damage it, push it away and give it a grace period
@@ -204,6 +251,16 @@ namespace GITC.Core
             }
         }
 
+        private bool TouchingSpikes()
+        {
+            Vector2 p = agentPosition;
+            for (int x = Floor(p.X); x <= Floor(p.X + agentWidth - 0.01f); x++)
+                for (int y = Floor(p.Y); y <= Floor(p.Y + agentHeight - 0.01f); y++)
+                    if (Tile(x, y) == '^' && p.Y + agentHeight > (y + 1 - SPIKEHEIGHT) * tileSize)
+                        return true;
+            return false;
+        }
+
         // Moves horizontally and stops at the first solid column in the way (moves are always under a tile per slice)
         private void MoveX(float dx)
         {
@@ -217,6 +274,9 @@ namespace GITC.Core
             for (int y = top; y <= bottom; y++)
                 if (IsSolid(col, y))
                 {
+                    FavBarrierDef barrier = BarrierAt(col, y);
+                    if (barrier != null)
+                        TouchBarrier(barrier);
                     p.X = dx > 0f ? col * tileSize - agentWidth : (col + 1) * tileSize;
                     agentVelocity = new Vector2(0f, agentVelocity.Y);
                     break;

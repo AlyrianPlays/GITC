@@ -25,6 +25,16 @@ namespace GITC.Core
             world.moveDirection = 0;
         }
 
+        // Runs a whole mission at 60 fps while the FAV agent is steered directly (no keyboard needed)
+        private static void RunMissionFav(GITCGame game, Mission mission, FavWorld world, float seconds, int move)
+        {
+            for (int f = 0; f < (int)(seconds * 60); f++)
+            {
+                world.moveDirection = move;
+                mission.Update(new Microsoft.Xna.Framework.GameTime(TimeSpan.FromSeconds(f / 60.0), TimeSpan.FromSeconds(1.0 / 60.0)), game.currGameState.input);
+            }
+        }
+
         private static void SimulateSeconds(GITCGame game, Mission mission, int seconds)
         {
             for (int s = 1; s <= seconds; s++)
@@ -332,11 +342,59 @@ namespace GITC.Core
             bool hitAlive = !favModule.world.isAgentDown && favModule.world.graceSeconds > 0f;
             System.Diagnostics.Debug.WriteLine("DevChecks FAV enemies: in the open dead=" + spottedDead + ", respawned after 3 s=" + respawned + ", hidden safe=" + !hideWorld.isAgentDown + " (alert " + hideWorld.enemies[0].alert + "), facing away safe=" + !awayWorld.isAgentDown + ", behind wall safe=" + !wallWorld.isAgentDown + ", non-lethal: alive with grace=" + hitAlive + ", OP " + opsBeforeHit + " -> " + favMission.operatorPoints + " (expect all True, 10 less), fav events: " + favSeen.Trim());
 
-            // Visual aid: GITC_DEVFAV=1 puts the running mission's agent, hidden, a few tiles from guard_a so the enemy and its cone are on screen
-            if (Environment.GetEnvironmentVariable("GITC_DEVFAV") == "1")
+            // T-8.3: spikes and a pit kill; both can be jumped; a barrier asks the TIM, opens when answered, stays shut when the time runs out
+            Func<int, int, char, FavLevelDef> hazardLevel = (fromX, toX, c) =>
+            {
+                FavLevelDef d = FavLevelDef.Flat(30, 8);
+                int row = c == '^' ? 5 : 6;
+                for (int r = row; r <= (c == '^' ? 5 : 7); r++)
+                    d.tiles[r] = d.tiles[r].Substring(0, fromX) + new string(c, toX - fromX + 1) + d.tiles[r].Substring(toX + 1);
+                return d;
+            };
+            string favDeath = "";
+            FavWorld spikeWorld = new FavWorld(hazardLevel(7, 7, '^')); spikeWorld.onDeath = c => favDeath += c + " ";
+            RunFav(spikeWorld, 2f, 1);
+            FavWorld pitWorld = new FavWorld(hazardLevel(7, 9, '.')); pitWorld.onDeath = c => favDeath += c + " ";
+            RunFav(pitWorld, 3f, 1);
+            FavWorld spikeJump = new FavWorld(hazardLevel(7, 7, '^'));
+            RunFav(spikeJump, 0.3f, 0); RunFav(spikeJump, 0.42f, 1); RunFav(spikeJump, 1f, 1, true);
+            FavWorld pitJump = new FavWorld(hazardLevel(7, 9, '.'));
+            RunFav(pitJump, 0.3f, 0); RunFav(pitJump, 0.42f, 1); RunFav(pitJump, 1f, 1, true);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV hazards: deaths='" + favDeath.Trim() + "' (expect spikes pit), jumped spikes alive=" + !spikeJump.isAgentDown + " at x=" + (int)(spikeJump.agentPosition.X / spikeJump.tileSize) + ", jumped pit alive=" + !pitJump.isAgentDown + " at x=" + (int)(pitJump.agentPosition.X / pitJump.tileSize) + " (expect True >7, True >9)");
+
+            Func<FavLevelDef> gateLevel = () =>
+            {
+                FavLevelDef d = FavLevelDef.Flat(30, 8);
+                d.barriers.Add(new FavBarrierDef() { id = "gate", x = 8, y = 0, height = 6, command = "override gate", seconds = 3 });
+                return d;
+            };
+            Mission gateMission = new Mission(game, new MissionDef() { id = "debug_gate", durationSeconds = 120, startingOps = 30 });
+            string gateSeen = "";
+            System.Action<ModuleEvent> gatePrev = gateMission.moduleManager.eventHandler;
+            gateMission.moduleManager.eventHandler = e => { gateSeen += e.type + " "; gatePrev(e); };
+            FAVModule gateFav = (FAVModule)gateMission.moduleManager.Get(ModuleTypes.fav);
+            TIMModule gateTim = (TIMModule)gateMission.moduleManager.Get(ModuleTypes.tim);
+            gateFav.SetWorld(new FavWorld(gateLevel()));
+            RunMissionFav(game, gateMission, gateFav.world, 2f, 1);
+            bool blocked = gateFav.world.agentPosition.X + gateFav.world.agentWidth <= 8 * gateFav.world.tileSize + 0.01f;
+            string gateAsked = gateTim.challenges.Count > 0 ? gateTim.challenges[0].command : "<none>";
+            gateTim.SubmitLine("Override  Gate");
+            RunMissionFav(game, gateMission, gateFav.world, 1.5f, 1);
+            bool passed = gateFav.world.agentPosition.X > 9 * gateFav.world.tileSize;
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV barrier answered: blocked=" + blocked + ", TIM asked='" + gateAsked + "', focus=" + gateMission.moduleManager.focusedModule + ", open=" + gateFav.world.openBarriers.Contains("gate") + ", walked through=" + passed + ", OP=" + gateMission.operatorPoints + " (expect True, override gate, tim, True, True, 30), events: " + gateSeen.Trim());
+            gateSeen = "";
+            gateFav.SetWorld(new FavWorld(gateLevel()));
+            RunMissionFav(game, gateMission, gateFav.world, 6f, 1);
+            bool stillShut = !gateFav.world.openBarriers.Contains("gate") && gateFav.world.agentPosition.X < 8 * gateFav.world.tileSize;
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV barrier missed: still shut=" + stillShut + ", OP=" + gateMission.operatorPoints + " (expect True, 20), asked again after retry=" + (gateTim.challenges.Count == 1) + ", events: " + gateSeen.Trim());
+
+            // Visual aid: GITC_DEVFAV=1 puts the running mission's agent, hidden, a few tiles from guard_a so the enemy and its cone are on screen;
+            // =2 puts it at column 70 so the spikes, drone_b and the barrier are in view
+            string devFav = Environment.GetEnvironmentVariable("GITC_DEVFAV");
+            if (devFav == "1" || devFav == "2")
             {
                 FavWorld runFav = ((FAVModule)game.currGameState.currMission.moduleManager.Get(ModuleTypes.fav)).world;
-                runFav.agentPosition = new Microsoft.Xna.Framework.Vector2(41 * runFav.tileSize, 17 * runFav.tileSize - runFav.agentHeight);
+                runFav.agentPosition = new Microsoft.Xna.Framework.Vector2((devFav == "1" ? 41 : 70) * runFav.tileSize, 17 * runFav.tileSize - runFav.agentHeight);
                 runFav.isGrounded = true;
                 runFav.isHidden = true;
             }

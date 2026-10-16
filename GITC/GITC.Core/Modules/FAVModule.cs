@@ -37,6 +37,7 @@ namespace GITC.Core
             world = newWorld;
             world.onDeath = AgentDied;
             world.onDamaged = AgentHit;
+            world.onBarrierTouched = BarrierTouched;
             respawnSeconds = 0f;
             FollowAgent();
         }
@@ -54,6 +55,27 @@ namespace GITC.Core
         {
             ShowFlash("SPOTTED! -" + enemy.def.damage + " OP");
             Raise(new ModuleEvent(ModuleEventTypes.op_penalty, ModuleTypes.fav, enemy.def.damage, "fav_spotted"));
+        }
+
+        // The agent is stuck at a barrier: ask the TIM for its command (the TIM takes focus and shows the countdown)
+        private void BarrierTouched(FavBarrierDef barrier)
+        {
+            Raise(new ModuleEvent(ModuleEventTypes.command_required, ModuleTypes.fav, barrier.seconds, barrier.command));
+        }
+
+        // The TIM's answer to a barrier request: satisfied opens it, failed leaves it shut (Mission charges the OPs for command_failed)
+        public override void OnEvent(ModuleEvent moduleEvent)
+        {
+            FavBarrierDef pending = world.level.barriers.Find(b => b.id == world.requestedBarrier);
+            if (pending == null || CommandChallenge.Normalize(moduleEvent.tag) != CommandChallenge.Normalize(pending.command))
+                return;
+            if (moduleEvent.type == ModuleEventTypes.command_satisfied)
+            {
+                world.OpenBarrier(pending.id);
+                ShowFlash("BARRIER OPEN");
+            }
+            else if (moduleEvent.type == ModuleEventTypes.command_failed)
+                world.BarrierFailed(pending.id);
         }
 
         private void ShowFlash(string text)
@@ -148,6 +170,32 @@ namespace GITC.Core
                         spriteBatch.Draw(px, new Rectangle(tile.X, tile.Y, tile.Width, 2), terrainColor);
                 }
 
+            // Spikes: three teeth per tile, in the lower part of the tile
+            float spikeTop = (1f - FavWorld.SPIKEHEIGHT) * ts;
+            for (int x = firstCol; x <= lastCol; x++)
+                for (int y = 0; y < world.rows; y++)
+                    if (world.Tile(x, y) == '^')
+                        for (int tooth = 0; tooth < 3; tooth++)
+                            for (int step = 0; step < 4; step++)
+                            {
+                                float w = ts / 3f * (step + 1) / 4f;
+                                float h = (ts - spikeTop) / 4f;
+                                spriteBatch.Draw(px, ScreenRect(x * ts + tooth * ts / 3f + (ts / 3f - w) / 2f, y * ts + spikeTop + step * h, w, h + 1f), Color.Lerp(Color.White, Color.Red, step / 3f));
+                            }
+
+            // Barriers: red flickering bars while shut, gold while the TIM is being asked, a faint frame once open
+            foreach (FavBarrierDef b in world.level.barriers)
+            {
+                bool open = world.openBarriers.Contains(b.id);
+                bool asking = world.requestedBarrier == b.id;
+                Color bar = open ? terrainColor * 0.15f : asking ? Color.Gold * (0.6f + 0.4f * (float)Math.Sin(elapsedSeconds * 8.0)) : Color.Red * (0.55f + 0.25f * (float)Math.Sin(elapsedSeconds * 20.0 + b.x));
+                for (int i = 0; i < 3; i++)
+                    spriteBatch.Draw(px, ScreenRect(b.x * ts + ts * (0.2f + 0.3f * i), b.y * ts, 3f, b.height * ts), bar);
+                if (!open)
+                    for (int row = 0; row < b.height; row += 2)
+                        spriteBatch.Draw(px, ScreenRect(b.x * ts, (b.y + row) * ts + ts / 2f, ts, 2f), bar * 0.6f);
+            }
+
             // Goal marker: a pole and flag at goalX
             Rectangle pole = ScreenRect(world.level.goalX * ts + ts / 2f - 1f, 0f, 2f, world.worldHeight);
             spriteBatch.Draw(px, pole, Color.Gold * 0.5f);
@@ -176,7 +224,10 @@ namespace GITC.Core
             }
 
             // Header
-            string status = flashSeconds > 0f ? flashText : world.isHidden ? "HIDDEN" : "";
+            FavBarrierDef waiting = world.level.barriers.Find(b => b.id == world.requestedBarrier);
+            string status = flashSeconds > 0f ? flashText
+                          : waiting != null ? "BARRIER: TYPE '" + waiting.command.ToUpper() + "'"
+                          : world.isHidden ? "HIDDEN" : "";
             spriteBatch.Draw(px, new Rectangle(region.X, region.Y, region.Width, MARGIN * 2), Color.Black * 0.6f);
             spriteBatch.DrawString(font, "FIELD AGENT" + (isFocused ? "  [FOCUS]" : ""), new Vector2(region.X + MARGIN, region.Y + MARGIN / 2), terrainColor);
             if (status.Length > 0)
