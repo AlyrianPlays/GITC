@@ -31,7 +31,10 @@ namespace GITC.Core
 
             //TESTING, REMOVE AFTER: placeholders until each real module exists
             modules.Add(new TIMModule(currGame));
-            modules.Add(new PlaceholderModule(currGame, ModuleTypes.fav, HudLayout.FAV, Color.Orange));
+            //Deprecated: FAV placeholder, replaced by FAVModule (T-8.1)
+            //modules.Add(new PlaceholderModule(currGame, ModuleTypes.fav, HudLayout.FAV, Color.Orange));
+            ModuleConfig favConfig = def?.modules.Find(m => m.module == "fav");
+            modules.Add(new FAVModule(currGame, favConfig?.favLevelFile));
             ModuleConfig lvmConfig = def?.modules.Find(m => m.module == "lvm");
             modules.Add(new LVMModule(currGame, lvmConfig?.maze ?? new MazeConfig(), lvmConfig?.difficulty ?? 1));
             ModuleConfig vmConfig = def?.modules.Find(m => m.module == "vm");

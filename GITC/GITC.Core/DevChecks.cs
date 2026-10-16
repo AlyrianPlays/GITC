@@ -13,6 +13,18 @@ namespace GITC.Core
                     lvm.TryMove(dir);
         }
 
+        // Runs a FAV world at 60 fps with the same intent every frame (move -1/0/1, jump pressed on the first frame only)
+        private static void RunFav(FavWorld world, float seconds, int move, bool jump = false)
+        {
+            for (int f = 0; f < (int)(seconds * 60); f++)
+            {
+                world.moveDirection = move;
+                world.jumpRequested = jump && f == 0;
+                world.Update(1f / 60f);
+            }
+            world.moveDirection = 0;
+        }
+
         private static void SimulateSeconds(GITCGame game, Mission mission, int seconds)
         {
             for (int s = 1; s <= seconds; s++)
@@ -273,6 +285,20 @@ namespace GITC.Core
             bool ignoredWhileActive = lvm.maze == runningMaze;
             SimulateSeconds(game, lvmMission, 3);
             System.Diagnostics.Debug.WriteLine("DevChecks LVM timeout: failed=" + lvm.mazesFailed + ", standing by=" + !lvm.isChallengeActive + ", OP " + opsBeforeTimeout + " -> " + lvmMission.operatorPoints + " (expect 1, True, 10 less), second request ignored while active=" + ignoredWhileActive + ", events: " + lvmSeen.Trim());
+
+            // T-8.1: the agent lands on the ground, is stopped by the 2-tile block, jumps over it, and can't move while hidden
+            FavWorld fav = new FavWorld(FAVModule.LoadLevel(FAVModule.DEFAULTLEVELFILE));
+            RunFav(fav, 0.5f, 0);
+            bool landed = fav.isGrounded;
+            RunFav(fav, 3f, 1);
+            float blockedAt = fav.agentPosition.X + fav.agentWidth;
+            RunFav(fav, 0.1f, -1);
+            RunFav(fav, 1.2f, 1, true);
+            bool overBlock = fav.agentPosition.X > 22 * fav.tileSize && fav.isGrounded;
+            fav.ToggleHide();
+            float hiddenX = fav.agentPosition.X;
+            RunFav(fav, 1f, 1, true);
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV physics: level " + fav.columns + "x" + fav.rows + ", landed=" + landed + ", stopped at x=" + blockedAt + " (expect " + 20 * fav.tileSize + "), jumped over block=" + overBlock + ", hidden=" + fav.isHidden + " stayed put=" + (fav.agentPosition.X == hiddenX) + " (expect True, True, True)");
 
             // Visual aid: GITC_DEVLIDAR=1 walks the running mission's LVM six steps along the solution; =2 also turns the lidar radius on
             string devLidar = Environment.GetEnvironmentVariable("GITC_DEVLIDAR");

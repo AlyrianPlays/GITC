@@ -20,5 +20,14 @@ namespace GITC.Core
             tileSize = 16;
             tiles = new List<string>();
         }
+
+        // Fallback when no level file loads: open air over two rows of ground, spawn at the left, goal at the right
+        public static FavLevelDef Flat(int columns, int rows)
+        {
+            FavLevelDef def = new FavLevelDef() { id = "flat", tileSize = 24, spawnX = 2, spawnY = rows - 3, goalX = columns - 3 };
+            for (int y = 0; y < rows; y++)
+                def.tiles.Add(new string(y >= rows - 2 ? '#' : '.', columns));
+            return def;
+        }
     }
 }
