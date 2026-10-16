@@ -1,10 +1,15 @@
 ﻿{
-  // FAV test segment (T-8.1): 96x20 tiles of 24 px. '.' empty, '#' solid.
+  // FAV test segment (T-8.1/8.2): 96x20 tiles of 24 px. '.' empty, '#' solid.
   "id": "test_01",
   "tileSize": 24,
   "spawnX": 2,
   "spawnY": 16,
   "goalX": 92,
+  // T-8.2: patrolling enemies (tile coords). lethal = spotting kills the agent; otherwise it costs `damage` OPs.
+  "enemies": [
+    { "id": "guard_a", "x": 50, "y": 16, "patrolFromX": 44, "patrolToX": 54, "speed": 2, "sightRange": 6, "detectSeconds": 0.6, "lethal": true },
+    { "id": "drone_b", "x": 64, "y": 16, "patrolFromX": 60, "patrolToX": 70, "speed": 2.5, "sightRange": 5, "detectSeconds": 0.5, "lethal": false, "damage": 10, "facing": -1 }
+  ],
   "tiles": [
     "................................................................................................",
     "................................................................................................",

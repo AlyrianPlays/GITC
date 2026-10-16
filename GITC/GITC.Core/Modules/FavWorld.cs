@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
 
 namespace GITC.Core
 {
@@ -23,6 +24,16 @@ namespace GITC.Core
         // Input intent, set by FAVModule.HandleInput before each Update and cleared after it
         public int moveDirection { get; set; }
         public bool jumpRequested { get; set; }
+        public List<FavEnemy> enemies { get; set; }
+        // Dead agents don't move and can't be seen; FAVModule respawns them
+        public bool isAgentDown { get; set; }
+        // Seconds left in which no enemy can spot the agent (after a hit, or after a respawn)
+        public float graceSeconds { get; set; }
+        // Seconds left of a knockback, during which the push replaces the player's steering
+        public float knockbackSeconds { get; set; }
+        // Called once when the agent dies (cause: spotted, spikes, pit ...) and when a non-lethal enemy spots it
+        public Action<string> onDeath { get; set; }
+        public Action<FavEnemy> onDamaged { get; set; }
 
         // Tiles per second (squared for gravity). A jump clears about 3 tiles up and 5 across.
         public const float GRAVITY = 60f;
@@ -32,6 +43,10 @@ namespace GITC.Core
         // Agent box in tiles
         public const float AGENTWIDTH = 0.6f;
         public const float AGENTHEIGHT = 1.4f;
+        // After a non-lethal spot: seconds before the agent can be spotted again, and how far it is pushed back (tiles/s)
+        public const float GRACESECONDS = 2f;
+        public const float KNOCKBACKSPEED = 9f;
+        public const float KNOCKBACKTIME = 0.25f;
         // Physics runs in fixed slices so a long frame (or a simulated second) can't tunnel through a tile
         private const float STEP = 1f / 120f;
 
@@ -43,6 +58,7 @@ namespace GITC.Core
             columns = 0;
             foreach (string row in level.tiles)
                 columns = Math.Max(columns, row.Length);
+            enemies = new List<FavEnemy>();
             Respawn();
         }
 
@@ -59,7 +75,14 @@ namespace GITC.Core
             agentVelocity = Vector2.Zero;
             isGrounded = false;
             isHidden = false;
+            isAgentDown = false;
+            graceSeconds = 0f;
+            knockbackSeconds = 0f;
             facing = 1;
+            // Enemies go back to their starting posts
+            enemies.Clear();
+            foreach (FavEnemyDef e in level.enemies)
+                enemies.Add(new FavEnemy(e, tileSize));
         }
 
         // Character at a tile; the sides of the level are walls, above and below are open air
@@ -75,6 +98,30 @@ namespace GITC.Core
         public bool IsSolid(int x, int y)
         {
             return Tile(x, y) == '#';
+        }
+
+        // Walks the segment in quarter-tile steps; any solid tile on the way blocks the view
+        public bool LineOfSight(Vector2 from, Vector2 to)
+        {
+            float distance = Vector2.Distance(from, to);
+            int steps = Math.Max(1, (int)(distance / (tileSize / 4f)));
+            for (int i = 1; i < steps; i++)
+            {
+                Vector2 at = Vector2.Lerp(from, to, i / (float)steps);
+                if (IsSolid(Floor(at.X), Floor(at.Y)))
+                    return false;
+            }
+            return true;
+        }
+
+        public void KillAgent(string cause)
+        {
+            if (isAgentDown)
+                return;
+            isAgentDown = true;
+            isHidden = false;
+            agentVelocity = Vector2.Zero;
+            onDeath?.Invoke(cause);
         }
 
         public void ToggleHide()
@@ -98,9 +145,23 @@ namespace GITC.Core
 
         private void Step(float dt)
         {
+            foreach (FavEnemy enemy in enemies)
+                enemy.Update(dt, this);
+            if (isAgentDown)
+                return;
+            graceSeconds = Math.Max(0f, graceSeconds - dt);
+            knockbackSeconds = Math.Max(0f, knockbackSeconds - dt);
+            CheckSpotted();
+            if (isAgentDown)
+                return;
+
             Vector2 v = agentVelocity;
             int move = isHidden ? 0 : Math.Sign(moveDirection);
-            v.X = move * RUNSPEED * tileSize;
+            // While being knocked back the push replaces the player's steering
+            if (knockbackSeconds > 0f)
+                move = 0;
+            else
+                v.X = move * RUNSPEED * tileSize;
             if (move != 0)
                 facing = move;
             if (jumpRequested && isGrounded && !isHidden)
@@ -119,6 +180,28 @@ namespace GITC.Core
             // Fell out of the bottom of the level: back to the spawn (T-8.3 turns this into a death)
             if (agentPosition.Y > worldHeight)
                 Respawn();
+        }
+
+        // An enemy with a full alert spots the agent: lethal ones kill it, the others damage it, push it away and give it a grace period
+        private void CheckSpotted()
+        {
+            foreach (FavEnemy enemy in enemies)
+            {
+                if (enemy.alert < 1f || graceSeconds > 0f)
+                    continue;
+                if (enemy.def.lethal)
+                {
+                    KillAgent("spotted");
+                    return;
+                }
+                enemy.alert = 0f;
+                graceSeconds = GRACESECONDS;
+                knockbackSeconds = KNOCKBACKTIME;
+                int away = agentCenter.X < enemy.position.X + enemy.width / 2f ? -1 : 1;
+                agentVelocity = new Vector2(away * KNOCKBACKSPEED * tileSize, -JUMPSPEED * 0.4f * tileSize);
+                isGrounded = false;
+                onDamaged?.Invoke(enemy);
+            }
         }
 
         // Moves horizontally and stops at the first solid column in the way (moves are always under a tile per slice)

@@ -2,7 +2,7 @@
 
 namespace GITC.Core
 {
-    // One Field Agent Visualizer level segment. Enemies and barriers are added in T-8.2 / T-8.3.
+    // One Field Agent Visualizer level segment. Barriers are added in T-8.3.
     internal class FavLevelDef
     {
         public string id { get; set; }
@@ -14,11 +14,13 @@ namespace GITC.Core
         public int spawnX { get; set; }
         public int spawnY { get; set; }
         public int goalX { get; set; }
+        public List<FavEnemyDef> enemies { get; set; }
 
         public FavLevelDef()
         {
             tileSize = 16;
             tiles = new List<string>();
+            enemies = new List<FavEnemyDef>();
         }
 
         // Fallback when no level file loads: open air over two rows of ground, spawn at the left, goal at the right

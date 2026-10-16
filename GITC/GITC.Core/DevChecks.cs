@@ -300,6 +300,47 @@ namespace GITC.Core
             RunFav(fav, 1f, 1, true);
             System.Diagnostics.Debug.WriteLine("DevChecks FAV physics: level " + fav.columns + "x" + fav.rows + ", landed=" + landed + ", stopped at x=" + blockedAt + " (expect " + 20 * fav.tileSize + "), jumped over block=" + overBlock + ", hidden=" + fav.isHidden + " stayed put=" + (fav.agentPosition.X == hiddenX) + " (expect True, True, True)");
 
+            // T-8.2: a guard 6 tiles from the spawn. Seen in the open -> dead; hidden, facing away, or behind a wall -> safe; a non-lethal one costs OPs
+            Func<int, bool, int, FavLevelDef> guardLevel = (facing, lethal, wallX) =>
+            {
+                FavLevelDef d = FavLevelDef.Flat(30, 8);
+                d.enemies.Add(new FavEnemyDef() { id = "g", x = 8, y = 5, patrolFromX = 8, patrolToX = 8, facing = facing, sightRange = 8, detectSeconds = 0.5f, lethal = lethal, damage = 10 });
+                if (wallX > 0)
+                    for (int y = 2; y <= 5; y++)
+                        d.tiles[y] = d.tiles[y].Substring(0, wallX) + "#" + d.tiles[y].Substring(wallX + 1);
+                return d;
+            };
+            Mission favMission = new Mission(game, new MissionDef() { id = "debug_fav", durationSeconds = 120, startingOps = 30 });
+            string favSeen = "";
+            System.Action<ModuleEvent> favPrev = favMission.moduleManager.eventHandler;
+            favMission.moduleManager.eventHandler = e => { if (e.source == ModuleTypes.fav) favSeen += e.type + "(" + e.tag + ") "; favPrev(e); };
+            FAVModule favModule = (FAVModule)favMission.moduleManager.Get(ModuleTypes.fav);
+            favModule.SetWorld(new FavWorld(guardLevel(-1, true, 0)));
+            SimulateSeconds(game, favMission, 1);
+            bool spottedDead = favModule.world.isAgentDown;
+            SimulateSeconds(game, favMission, 3);
+            bool respawned = !favModule.world.isAgentDown;
+            FavWorld hideWorld = new FavWorld(guardLevel(-1, true, 0));
+            RunFav(hideWorld, 0.2f, 0); hideWorld.ToggleHide(); RunFav(hideWorld, 2f, 0);
+            FavWorld awayWorld = new FavWorld(guardLevel(1, true, 0));
+            RunFav(awayWorld, 2f, 0);
+            FavWorld wallWorld = new FavWorld(guardLevel(-1, true, 5));
+            RunFav(wallWorld, 2f, 0);
+            favModule.SetWorld(new FavWorld(guardLevel(-1, false, 0)));
+            int opsBeforeHit = favMission.operatorPoints;
+            SimulateSeconds(game, favMission, 1);
+            bool hitAlive = !favModule.world.isAgentDown && favModule.world.graceSeconds > 0f;
+            System.Diagnostics.Debug.WriteLine("DevChecks FAV enemies: in the open dead=" + spottedDead + ", respawned after 3 s=" + respawned + ", hidden safe=" + !hideWorld.isAgentDown + " (alert " + hideWorld.enemies[0].alert + "), facing away safe=" + !awayWorld.isAgentDown + ", behind wall safe=" + !wallWorld.isAgentDown + ", non-lethal: alive with grace=" + hitAlive + ", OP " + opsBeforeHit + " -> " + favMission.operatorPoints + " (expect all True, 10 less), fav events: " + favSeen.Trim());
+
+            // Visual aid: GITC_DEVFAV=1 puts the running mission's agent, hidden, a few tiles from guard_a so the enemy and its cone are on screen
+            if (Environment.GetEnvironmentVariable("GITC_DEVFAV") == "1")
+            {
+                FavWorld runFav = ((FAVModule)game.currGameState.currMission.moduleManager.Get(ModuleTypes.fav)).world;
+                runFav.agentPosition = new Microsoft.Xna.Framework.Vector2(41 * runFav.tileSize, 17 * runFav.tileSize - runFav.agentHeight);
+                runFav.isGrounded = true;
+                runFav.isHidden = true;
+            }
+
             // Visual aid: GITC_DEVLIDAR=1 walks the running mission's LVM six steps along the solution; =2 also turns the lidar radius on
             string devLidar = Environment.GetEnvironmentVariable("GITC_DEVLIDAR");
             if (devLidar == "1" || devLidar == "2")
