@@ -6,7 +6,6 @@ companies from a single console: a Hardware Interface Module split into five mod
 
 > **Status: early prototype (proof of concept).** The engine core, the Text Input Module and the Vital Monitor work.
 > The Field Agent, Lidar maze, Hardware Interface puzzle and the overworld are still to come.
-> See [`PLAN.md`](PLAN.md) for the full task list and progress log.
 
 ## The idea
 
@@ -68,8 +67,6 @@ GITC/GITC.Core/             All game code and content (namespace GITC.Core)
 GITC/GITC.DesktopGL/        Desktop launcher
 docs/                       DATA_FORMATS.md (JSON schemas), THEMING.md (palette, border tint, logo)
 GameDescription.txt         Design notes: world, modules, companies
-PLAN.md                     Development plan, split into small tasks, with a progress log
-CLAUDE.md                   Conventions for the AI assistant helping with this project
 ```
 
 Game content (companies, commands, the filesystem, missions) is JSON under `GITC/GITC.Core/Content/Data/`; see
@@ -79,9 +76,8 @@ Game content (companies, commands, the filesystem, missions) is JSON under `GITC
 
 - MonoGame 3.8.x, .NET 9, 1920x1080 logical resolution scaled to the window with letterboxing.
 - Code style follows the owner's other MonoGame projects (camelCase properties, enum-indexed state lists, Allman braces,
-  UTF-8 with BOM and CRLF). See `CLAUDE.md`.
+  UTF-8 with BOM and CRLF).
 - There are no automated tests; `DevChecks.cs` runs headless self-checks at startup (set `GITC_DEVCHECKS=1` to see them).
-- Work is planned as small tasks in [`PLAN.md`](PLAN.md), each with files, steps and a "done when" check.
 
 ## License
 
